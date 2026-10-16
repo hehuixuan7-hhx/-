@@ -204,7 +204,7 @@ button{cursor:pointer}
         <form class="composer" id="composer" autocomplete="off">
           <button type="button" class="ibtn" id="modeBtn" aria-label="切换文字和语音输入"></button>
           <input type="text" id="txt" placeholder="今天中午吃饭花了18元" aria-label="记账内容">
-          <button type="button" id="hold" hidden>按住 说话</button>
+          <button type="button" id="hold" hidden>点击 开始说话</button>
           <button type="submit" class="send" id="sendBtn">发送</button>
         </form>
       </section>
@@ -771,6 +771,7 @@ function parseEntry(text) {
   };
   const TABS = [['chat', '记账', '随口记'], ['bills', '账单', '账单'], ['stats', '统计', '统计'], ['me', '我的', '我的']];
   function setTab(t) {
+    if (t !== 'chat') cancelSpeech();
     tab = t;
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + t));
     $('#navTitle').textContent = TABS.find(x => x[0] === t)[2];
@@ -784,26 +785,81 @@ function parseEntry(text) {
     if (!voiceMode) $('#voicePanel').hidden = true;
   }
   function voicePanel(html) { const p = $('#voicePanel'); p.innerHTML = html; p.hidden = false; }
-  function startRec(e) {
-    if (recording) return;
-    recording = true; recStart = Date.now();
-    const h = $('#hold'); h.classList.add('rec'); h.textContent = '松开 结束';
-    try { h.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
-    voicePanel('<div class="vh">正在听，松开结束</div><div class="wave">' + '<i></i>'.repeat(20) + '</div>');
+  let activeSpeech = null;
+  function cancelSpeech() {
+    const s = activeSpeech; activeSpeech = null;
+    recording = false;
+    $('#hold').classList.remove('rec');
+    $('#hold').textContent = '点击 开始说话';
+    if (s) { clearTimeout(s.timer); try { s.rec.abort(); } catch (_) {} }
+  }
+  function speechNotice(message) {
+    voicePanel('<div class="vh">' + esc(message) + '</div><div class="vbtns"><button data-act="vcancel">关闭</button></div>');
+  }
+  function startRec() {
+    if (activeSpeech) return;
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!window.isSecureContext || !Recognition) {
+      speechNotice('当前环境不支持语音识别。请通过 HTTPS 在支持语音识别的浏览器中打开，或使用键盘的语音输入。'); return;
+    }
+    const rec = new Recognition();
+    const s = { rec, text: '', failed: false, stopping: false, timer: null };
+    activeSpeech = s; recording = true;
+    rec.lang = 'zh-CN'; rec.continuous = false; rec.interimResults = true;
+    $('#hold').classList.add('rec'); $('#hold').textContent = '点击 结束';
+    voicePanel('<div class="vh">正在启动，请允许浏览器使用麦克风…</div>');
+    rec.onstart = () => {
+      if (activeSpeech !== s) return;
+      if (s.stopping) { rec.stop(); return; }
+      voicePanel('<div class="vh">正在听，请说话；说完点击结束</div>');
+    };
+    rec.onresult = e => {
+      if (activeSpeech !== s) return;
+      s.text = Array.from(e.results, r => r[0].transcript).join('');
+      voicePanel('<div class="vh">正在识别：' + esc(s.text) + '</div>');
+    };
+    rec.onerror = e => {
+      if (activeSpeech !== s) return;
+      s.failed = true;
+      const errors = {
+        'not-allowed': '麦克风权限被拒绝，请在地址栏的网站权限中允许麦克风后重试。',
+        'audio-capture': '无法使用麦克风，请检查设备和系统麦克风权限。',
+        'network': '语音识别服务连接失败，请检查网络，或改用键盘语音输入。',
+        'no-speech': '没有听到说话，请点击按钮重试。',
+        'service-not-allowed': '浏览器语音识别服务不可用，请改用键盘语音输入。'
+      };
+      cancelSpeech();
+      speechNotice(errors[e.error] || '语音识别失败，请重试或使用文字输入。');
+    };
+    rec.onend = () => {
+      if (activeSpeech !== s) return;
+      clearTimeout(s.timer); activeSpeech = null;
+      recording = false;
+      $('#hold').classList.remove('rec'); $('#hold').textContent = '点击 开始说话';
+      if (s.failed || !voiceMode || tab !== 'chat') return;
+      if (!s.text.trim()) { speechNotice('没有识别到文字，请点击按钮重试。'); return; }
+      voicePanel('<div class="vh">识别完成，检查或修改后发送</div><textarea id="vtxt" aria-label="识别结果">' + esc(s.text) + '</textarea><div class="vbtns"><button data-act="vcancel">取消</button><button class="go" data-act="vsend">发送</button></div>');
+    };
+    try {
+      rec.start();
+      s.timer = setTimeout(() => {
+        if (activeSpeech !== s) return;
+        cancelSpeech(); speechNotice('语音识别超时，请重试或使用文字输入。');
+      }, 60000);
+    } catch (_) { cancelSpeech(); speechNotice('无法启动语音识别，请检查浏览器权限后重试。'); }
   }
   function endRec() {
-    if (!recording) return;
-    recording = false;
-    const h = $('#hold'); h.classList.remove('rec'); h.textContent = '按住 说话';
-    if (Date.now() - recStart < 500) { $('#voicePanel').hidden = true; toast('说话时间太短，请按住再说'); return; }
-    voicePanel('<div class="vh">识别中…</div>');
-    setTimeout(() => {
-      const s = SAMPLES[si++ % SAMPLES.length];
-      if (s == null) { voicePanel('<div class="vh">没听清，请再说一次，或直接用文字输入。</div><div class="vbtns"><button data-act="vcancel">知道了</button></div>'); return; }
-      voicePanel(`<div class="vh">识别结果，发送前可以修改（演示未接入真实麦克风，使用示例语音文本）</div><textarea id="vtxt" aria-label="识别结果">${esc(s)}</textarea><div class="vbtns"><button data-act="vcancel">重录</button><button class="go" data-act="vsend">发送</button></div>`);
-    }, 800);
+    const s = activeSpeech;
+    if (!s || s.stopping) return;
+    s.stopping = true;
+    $('#hold').textContent = '识别中…';
+    try { s.rec.stop(); } catch (_) {}
+    clearTimeout(s.timer);
+    s.timer = setTimeout(() => {
+      if (activeSpeech !== s) return;
+      cancelSpeech(); speechNotice('识别服务未响应，请重试或使用文字输入。');
+    }, 12000);
   }
-
   /* ---------- events ---------- */
   document.addEventListener('click', e => {
     const wrap = $('#sheetWrap');
@@ -839,7 +895,7 @@ function parseEntry(text) {
         if ([...S.catsOut, ...S.catsIn, '待分类'].includes(v)) { toast('已有同名分类'); break; }
         S.catsOut.push(v); persist(); renderAll(); toast('已添加分类'); break;
       }
-      case 'revoke': S.voiceOK = false; voiceMode = false; applyMode(); persist(); renderMe(); toast('已撤销语音授权'); break;
+      case 'revoke': cancelSpeech(); S.voiceOK = false; voiceMode = false; applyMode(); persist(); renderMe(); toast('已关闭语音功能；麦克风权限请在浏览器设置中撤销'); break;
       case 'reseed': seed(); lastBatch = []; persist(); meAskClear = false; renderAll(); toast('已恢复示例数据'); break;
       case 'clear':
         if (!meAskClear) { meAskClear = true; renderMe(); break; }
@@ -857,7 +913,7 @@ function parseEntry(text) {
         persist(); closeSheet(); renderAll(); toast('已保存修改，明细和统计已同步'); break;
       }
       case 'vyes': S.voiceOK = true; persist(); closeSheet(); voiceMode = true; applyMode(); renderMe(); break;
-      case 'vcancel': $('#voicePanel').hidden = true; break;
+      case 'vcancel': cancelSpeech(); $('#voicePanel').hidden = true; break;
       case 'vsend': { const t = $('#vtxt').value; $('#voicePanel').hidden = true; send(t, 'voice'); break; }
     }
   });
@@ -865,18 +921,19 @@ function parseEntry(text) {
   $('#modeBtn').addEventListener('click', () => {
     if (!voiceMode && !S.voiceOK) {
       $('#sheetWrap').innerHTML = `<div class="sheet" role="dialog" aria-label="开启语音记账"><h3>开启语音记账</h3>
-        <p>录音只用于识别你说的账目，识别完成后不保留原始录音。识别出的文字会交给智能理解服务整理成账单。</p>
-        <p>你可以随时在“我的”页的隐私设置里撤销授权。</p>
+        <p>语音由浏览器的识别服务转成文字，可能发送到浏览器服务商的服务器处理。本网页不保存原始录音；文字经你确认发送后，由本地规则整理成账单。</p>
+        <p>你可以在“我的”页关闭语音功能；浏览器麦克风权限需要在地址栏的网站权限中撤销。</p>
         <div class="btns"><button type="button" class="btn" data-act="sclose">暂不开启</button><button type="button" class="btn primary" data-act="vyes">同意并继续</button></div></div>`;
       $('#sheetWrap').hidden = false; return;
     }
-    voiceMode = !voiceMode; applyMode();
+    cancelSpeech(); voiceMode = !voiceMode; applyMode();
   });
   const hold = $('#hold');
-  hold.addEventListener('pointerdown', e => { e.preventDefault(); startRec(e); });
-  hold.addEventListener('pointerup', endRec);
-  hold.addEventListener('pointercancel', endRec);
-  hold.addEventListener('contextmenu', e => e.preventDefault());
+  hold.addEventListener('click', () => { if (activeSpeech) endRec(); else startRec(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { cancelSpeech(); $('#voicePanel').hidden = true; }
+  });
+  window.addEventListener('pagehide', cancelSpeech);
   $('#b-cat').addEventListener('change', e => { bf.cat = e.target.value; renderBills(); });
   $('#b-q').addEventListener('input', e => { bf.q = e.target.value.trim(); renderBills(); });
   $('#me-body').addEventListener('change', e => {
@@ -889,7 +946,7 @@ function parseEntry(text) {
   if (!load()) { seed(); persist(); }
   $('#chips').innerHTML = TRY.slice(0, 9).map(t => `<button data-act="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('');
   $('#tryList').innerHTML = TRY.map(t => `<button data-act="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('');
-  botSay('你好，我是随口记。直接打字，或点左下角的话筒按住说话，像发消息一样告诉我收支就行。');
+  botSay('你好，我是随口记。直接打字，或点左下角的话筒，再点击开始说话，像发消息一样告诉我收支就行。');
   applyMode();
   setTab('chat');
 })();
