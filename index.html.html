@@ -1,0 +1,898 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>随口记</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700&display=swap">
+<style>
+/* Layout: explainer column on the left, a 390px phone frame on the right; below 860px the phone fills the screen. */
+:root{
+  --bg:#e8eee9; --panel:#f4f7f5; --surface:#ffffff; --ink:#16211c; --ink2:#56645d; --line:#dce4df;
+  --accent:#0a7c5c; --accent-ink:#ffffff; --accent-soft:#dcefe7;
+  --out:#b3402a; --in:#0a7c5c; --warn:#a96a12; --warn-soft:#f6e9d2; --bad:#b3402a; --bad-soft:#f7e0da;
+  --c1:#2f7d6d; --c2:#d08b2e; --c3:#4a78b8; --c4:#b8566e; --c5:#7a68b5; --c6:#c2693a; --c7:#5d8f3a; --c8:#8a8f98;
+  --f-body:"Noto Sans SC",system-ui,"PingFang SC","Microsoft YaHei",sans-serif;
+  --f-num:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --f-display:"Noto Serif SC","Songti SC",serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1310; --panel:#121a16; --surface:#1a241f; --ink:#e6efe9; --ink2:#9baba2; --line:#2a3731;
+  --accent:#3fc79c; --accent-ink:#06241a; --accent-soft:#173a2d;
+  --out:#ef8a74; --in:#3fc79c; --warn:#e3b05c; --warn-soft:#3a2f17; --bad:#ef8a74; --bad-soft:#40211a;
+  --c1:#5fbfa9; --c2:#e0a95a; --c3:#7fa6df; --c4:#dd839a; --c5:#a999dc; --c6:#e18f63; --c7:#8cc063; --c8:#aab0b9;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1310; --panel:#121a16; --surface:#1a241f; --ink:#e6efe9; --ink2:#9baba2; --line:#2a3731;
+  --accent:#3fc79c; --accent-ink:#06241a; --accent-soft:#173a2d;
+  --out:#ef8a74; --in:#3fc79c; --warn:#e3b05c; --warn-soft:#3a2f17; --bad:#ef8a74; --bad-soft:#40211a;
+  --c1:#5fbfa9; --c2:#e0a95a; --c3:#7fa6df; --c4:#dd839a; --c5:#a999dc; --c6:#e18f63; --c7:#8cc063; --c8:#aab0b9;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stage{height:100%;display:flex;gap:56px;justify-content:center;align-items:center;min-height:0}
+.side{width:300px;flex:none;min-width:0}
+.side h1{font-family:var(--f-display);font-size:34px;line-height:1.15;margin:0 0 8px;letter-spacing:.04em}
+.side p{margin:0 0 18px;color:var(--ink2)}
+.side h2{font-size:12px;letter-spacing:.14em;color:var(--ink2);margin:22px 0 8px;font-weight:500}
+.try{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.try button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;text-align:left;max-width:100%}
+.try button:hover{border-color:var(--accent)}
+.rules{margin:0;padding-left:18px;color:var(--ink2);font-size:13px}
+.phone{width:390px;max-width:100%;height:min(780px,100%);flex:none;background:var(--panel);border:1px solid var(--line);
+  border-radius:28px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 18px 50px rgba(10,30,20,.14)}
+.nav{height:46px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--surface);border-bottom:1px solid var(--line);font-weight:700;letter-spacing:.06em}
+.views{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none;flex-direction:column;min-height:0}
+.view.on{display:flex}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:12px}
+.tabs{flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--line);padding-bottom:4px}
+.tabs button{border:0;background:none;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--ink2)}
+.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tabs button.on{color:var(--accent);font-weight:700}
+/* chat */
+#msgs{flex:1;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex}
+.row.me{justify-content:flex-end}
+.bubble{max-width:84%;padding:8px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);word-break:break-word;animation:pop .18s ease-out}
+.bubble.me{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.bubble .tag{font-size:11px;opacity:.8;margin-right:6px;border:1px solid currentColor;border-radius:4px;padding:0 4px}
+@keyframes pop{from{opacity:.0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.bubble,.wave i{animation:none!important}}
+.stack{display:flex;flex-direction:column;gap:8px;max-width:92%;min-width:min(280px,92%)}
+.hd{font-size:13px;color:var(--ink2);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.card.gone{opacity:.55}
+.card.gone .c-amt{text-decoration:line-through}
+.card.hold{border-color:var(--warn);background:var(--warn-soft)}
+.card.err{border-color:var(--bad);background:var(--bad-soft)}
+.c-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.c-cat{font-size:12px;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 8px;font-weight:500}
+.c-cat.todo{background:var(--warn-soft);color:var(--warn)}
+.c-amt{font-family:var(--f-num);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+.c-amt.out{color:var(--out)} .c-amt.in{color:var(--in)}
+.c-meta{font-size:12px;color:var(--ink2)}
+.c-act{display:flex;gap:14px;font-size:13px;margin-top:2px}
+.c-act button,.lnk{border:0;background:none;color:var(--accent);padding:2px 0;font-weight:500}
+.c-act span{color:var(--ink2);font-size:12px}
+.pill{border:1px solid var(--accent);background:var(--surface);color:var(--accent);border-radius:999px;padding:4px 12px;font-size:13px;margin:6px 6px 0 0}
+.pill:disabled{opacity:.45;cursor:default}
+.pill.solid{background:var(--accent);color:var(--accent-ink)}
+.chips{flex:none;display:flex;gap:8px;overflow-x:auto;padding:6px 12px;scrollbar-width:none}
+.chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:12.5px;color:var(--ink2)}
+.composer{flex:none;display:flex;gap:8px;align-items:center;padding:8px 12px 10px;background:var(--surface);border-top:1px solid var(--line)}
+.composer input[type=text]{flex:1;min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px}
+.ibtn{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;padding:0}
+.ibtn svg{width:20px;height:20px;stroke:var(--ink2);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.send{flex:none;border:0;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:8px 16px;font-weight:700}
+#hold{flex:1;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:9px;font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none}
+#hold.rec{background:var(--accent);color:var(--accent-ink)}
+#voicePanel{flex:none;margin:0 12px 6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+#voicePanel textarea{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px;resize:none;height:56px}
+#voicePanel .vh{font-size:12px;color:var(--ink2);margin-bottom:6px}
+.vbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.vbtns button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 14px}
+.vbtns .go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.wave{display:flex;gap:3px;align-items:center;height:22px}
+.wave i{width:3px;background:var(--accent);border-radius:2px;height:6px;animation:wv .7s ease-in-out infinite}
+.wave i:nth-child(2n){animation-delay:.15s}.wave i:nth-child(3n){animation-delay:.3s}
+@keyframes wv{50%{height:20px}}
+/* bills */
+.bar{flex:none;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.mnav{display:flex;align-items:center;justify-content:space-between}
+.mnav b{font-weight:700}
+.mnav button{border:1px solid var(--line);background:var(--panel);border-radius:8px;width:32px;height:28px}
+.sum{display:flex;gap:16px;font-size:13px;color:var(--ink2)}
+.sum b{font-family:var(--f-num);font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:4px 12px;font-size:13px}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.filters select,.filters input{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:4px 8px;min-width:0}
+.filters input{flex:1;min-width:90px}
+.rangechip{font-size:12px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;align-self:flex-start}
+.rangechip button{border:0;background:none;color:inherit;padding:0 0 0 6px}
+.day{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);margin:10px 2px 4px}
+.item{width:100%;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:6px;text-align:left}
+.dot{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700}
+.item .mid{flex:1;min-width:0}
+.item .mid b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .mid small{color:var(--ink2);font-size:12px}
+.item .amt{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:500}
+.item .amt.out{color:var(--out)}.item .amt.in{color:var(--in)}
+.empty{text-align:center;color:var(--ink2);padding:36px 12px}
+/* stats */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}
+.tile small{color:var(--ink2);font-size:12px}
+.tile b{display:block;font-family:var(--f-num);font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+.box h3{margin:0 0 8px;font-size:13px;color:var(--ink2);font-weight:500;letter-spacing:.06em}
+.donutrow{display:flex;gap:14px;align-items:center}
+.donutrow svg{flex:none;width:120px;height:120px}
+.legend{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.legend div{display:flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:3px;flex:none}
+.legend span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend em{font-style:normal;font-family:var(--f-num);color:var(--ink2);font-size:12px;font-variant-numeric:tabular-nums}
+.trend svg{width:100%;height:auto;display:block}
+/* me */
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.sec h3{margin:0 0 8px;font-size:14px}
+.sec p{margin:0 0 8px;color:var(--ink2);font-size:13px}
+.cats{display:flex;flex-wrap:wrap;gap:6px}
+.cats span{display:inline-flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 10px;font-size:13px}
+.cats span button{border:0;background:none;color:var(--ink2);padding:0 6px}
+.cats span button.ask{color:var(--bad);font-weight:700}
+.addcat{display:flex;gap:6px;margin-top:8px}
+.addcat input{flex:1;min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 8px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.danger.ask{background:var(--bad);color:#fff}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0}
+.prow small{display:block;color:var(--ink2);font-size:12px}
+.sw{position:relative;flex:none;width:44px;height:26px}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.sw span{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:background .15s}
+.sw span::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .15s}
+.sw input:checked+span{background:var(--accent)}
+.sw input:checked+span::after{transform:translateX(18px)}
+.sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+/* sheet + toast */
+#sheetWrap{position:absolute;inset:0;background:rgba(8,16,12,.45);display:flex;align-items:flex-end;z-index:20}
+#sheetWrap[hidden]{display:none}
+.sheet{width:100%;max-height:92%;overflow-y:auto;background:var(--surface);border-radius:20px 20px 0 0;padding:16px;display:flex;flex-direction:column;gap:10px}
+.sheet h3{margin:0;font-size:16px}
+.sheet label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink2)}
+.sheet input,.sheet select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px;color:var(--ink);font-size:14px}
+.sheet .btns{display:flex;gap:8px;justify-content:space-between;margin-top:4px}
+.sheet p{margin:0;color:var(--ink2);font-size:13px}
+#toast{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:6px 14px;border-radius:999px;font-size:13px;z-index:30;max-width:86%;text-align:center}
+#toast[hidden]{display:none}
+@media (max-width:860px){
+  .side{display:none}
+  .stage{align-items:stretch}
+  .phone{width:100%;height:100%;border-radius:20px}
+}
+</style>
+<div class="stage">
+  <aside class="side">
+    <h1>随口记</h1>
+    <p>像发消息一样记账。这是一个可操作的演示，数据只保存在当前浏览器里。</p>
+    <h2>点一下就能试</h2>
+    <div class="try" id="tryList"></div>
+    <h2>演示里已实现的规则</h2>
+    <ul class="rules">
+      <li>金额或收支方向不明确时先追问，再保存</li>
+      <li>短时间内相同金额和内容会提示核对</li>
+      <li>“我的”里可模拟保存失败，查看重试流程</li>
+      <li>修改、撤销后，账单和统计同步更新</li>
+    </ul>
+  </aside>
+  <div class="phone" id="phone">
+    <header class="nav" id="navTitle">随口记</header>
+    <div class="views">
+      <section class="view on" id="v-chat">
+        <div id="msgs"></div>
+        <div class="chips" id="chips"></div>
+        <div id="voicePanel" hidden></div>
+        <form class="composer" id="composer" autocomplete="off">
+          <button type="button" class="ibtn" id="modeBtn" aria-label="切换文字和语音输入"></button>
+          <input type="text" id="txt" placeholder="今天中午吃饭花了18元" aria-label="记账内容">
+          <button type="button" id="hold" hidden>按住 说话</button>
+          <button type="submit" class="send" id="sendBtn">发送</button>
+        </form>
+      </section>
+      <section class="view" id="v-bills">
+        <div class="bar">
+          <div class="mnav"><button data-act="mon" data-v="bills" data-d="-1" aria-label="上个月">‹</button><b id="b-month"></b><button data-act="mon" data-v="bills" data-d="1" aria-label="下个月">›</button></div>
+          <div class="sum"><span>支出 <b id="b-out"></b></span><span>收入 <b id="b-in"></b></span></div>
+          <div class="filters">
+            <div class="seg" id="b-seg"><button data-act="dirf" data-f="all">全部</button><button data-act="dirf" data-f="out">支出</button><button data-act="dirf" data-f="in">收入</button></div>
+            <select id="b-cat" aria-label="按类别筛选"></select>
+            <input type="search" id="b-q" placeholder="搜索备注" aria-label="按备注搜索">
+          </div>
+          <div id="b-range"></div>
+        </div>
+        <div class="scroll" id="b-list"></div>
+      </section>
+      <section class="view" id="v-stats">
+        <div class="bar"><div class="mnav"><button data-act="mon" data-v="stats" data-d="-1" aria-label="上个月">‹</button><b id="s-month"></b><button data-act="mon" data-v="stats" data-d="1" aria-label="下个月">›</button></div></div>
+        <div class="scroll" id="s-body"></div>
+      </section>
+      <section class="view" id="v-me">
+        <div class="scroll" id="me-body"></div>
+      </section>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+    <div id="sheetWrap" hidden></div>
+    <div id="toast" hidden></div>
+  </div>
+</div>
+<script>
+//#PARSER-START
+const S = {
+  bills: [],
+  catsOut: ['餐饮', '零食饮品', '交通出行', '购物', '学习', '娱乐', '居家', '医疗'],
+  catsIn: ['工资', '兼职收入', '红包礼金', '其他收入'],
+  prefs: { dup: true, fail: false },
+  voiceOK: false
+};
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const round2 = n => Math.round(n * 100) / 100;
+const money = n => '¥' + (Math.round(n * 100) / 100).toFixed(2);
+
+const CN = '零一二两三四五六七八九十百千万';
+const NUM = `(?:\\d+(?:\\.\\d+)?|[${CN}]+)`;
+
+function cn2n(s) {
+  if (/^\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+  const d = { 零: 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  let total = 0, sec = 0, num = 0, last = '', zero = false;
+  for (const ch of s) {
+    if (ch === '零') { zero = true; num = 0; }
+    else if (ch in d) num = d[ch];
+    else if (ch === '十') { sec += (num || 1) * 10; num = 0; last = '十'; zero = false; }
+    else if (ch === '百') { sec += num * 100; num = 0; last = '百'; zero = false; }
+    else if (ch === '千') { sec += num * 1000; num = 0; last = '千'; zero = false; }
+    else if (ch === '万') { total += (sec + num) * 10000; sec = 0; num = 0; last = '万'; zero = false; }
+  }
+  if (num > 0 && !zero) {
+    if (last === '百') num *= 10; else if (last === '千') num *= 100; else if (last === '万') num *= 1000;
+  }
+  return total + sec + num;
+}
+
+const AMB = new RegExp(`${NUM}\\s*多|几十|几百|几块|十几|好几|大概|左右|差不多|不到`);
+
+function extractAmount(seg) {
+  const am = seg.match(AMB);
+  if (am) return { amb: true, raw: am[0] };
+  let m = seg.match(new RegExp(`(${NUM})\\s*(?:块钱|块|元|圆)(?:\\s*(${NUM})\\s*(?:毛|角)?)?`));
+  if (m) {
+    let v = cn2n(m[1]);
+    if (m[2]) { const f = cn2n(m[2]); v += f < 10 ? f / 10 : f / 100; }
+    if (v > 0) return { amount: round2(v), raw: m[0] };
+  }
+  m = seg.match(new RegExp(`(${NUM})\\s*(?:毛|角)`));
+  if (m) { const v = cn2n(m[1]) / 10; if (v > 0) return { amount: round2(v), raw: m[0] }; }
+  m = seg.match(/(\d+(?:\.\d+)?)\s*$/) || seg.match(/(\d+(?:\.\d+)?)(?!\d*\s*[点号日月年个杯份瓶张次天])/);
+  if (m) { const v = parseFloat(m[1]); if (v > 0) return { amount: round2(v), raw: m[0] }; }
+  m = seg.match(new RegExp(`([${CN}]+)\\s*$`));
+  if (m) { const v = cn2n(m[1]); if (v > 0) return { amount: round2(v), raw: m[0] }; }
+  return null;
+}
+
+const INC = /到账|工资|收入|收到|奖金|红包|报销|稿费|兼职|入账|赚了|卖了|退款/;
+const EXP = /花|买|付|支出|消费|吃|喝|充值|交了|缴/;
+const TRANSFER = /转账|转给|转入我|还款/;
+const KW_OUT = [
+  ['零食饮品', /奶茶|零食|饮料|水果|冰淇淋|可乐|咖啡|甜品|蛋糕/],
+  ['餐饮', /吃饭|早餐|午餐|晚餐|早饭|午饭|晚饭|宵夜|外卖|火锅|聚餐|饭|面|餐|吃/],
+  ['交通出行', /打车|地铁|公交|滴滴|高铁|火车|机票|加油|停车|单车|出租/],
+  ['学习', /书|课|培训|文具|考试|学费/],
+  ['娱乐', /电影|游戏|KTV|ktv|演唱会|会员|门票/],
+  ['居家', /房租|水电|电费|话费|网费|物业|燃气/],
+  ['医疗', /药|医院|挂号|看病/],
+  ['购物', /衣服|外套|T恤|裤|鞋|淘宝|京东|日用品|超市|快递|购物/]
+];
+const KW_IN = [
+  ['兼职收入', /兼职|稿费|外快/],
+  ['工资', /工资|薪/],
+  ['红包礼金', /红包/]
+];
+
+function matchCat(seg, dir) {
+  const list = dir === 'in' ? S.catsIn : S.catsOut;
+  for (const [c, re] of (dir === 'in' ? KW_IN : KW_OUT)) if (re.test(seg) && list.includes(c)) return c;
+  for (const c of list) if (seg.includes(c)) return c;
+  return null;
+}
+
+function dateOf(seg) {
+  if (/前天/.test(seg)) return -2;
+  if (/昨天|昨晚|昨日/.test(seg)) return -1;
+  if (/今天|今早|今晚|今日/.test(seg)) return 0;
+  return null;
+}
+
+function mkNote(seg, raw, cat) {
+  let n = seg;
+  if (raw) n = n.replace(raw, '');
+  n = n.replace(/今天|昨天|前天|今早|昨晚|今晚|今日|昨日|花了|花费|共花|一共|总共|到账了?|收到了?|付了|买了|了|钱|刚刚|刚才/g, '')
+    .replace(/^[的\s]+|[的\s]+$/g, '').trim();
+  return n || cat || '';
+}
+
+function fixCat(d) {
+  d.cat = matchCat(d.seg, d.dir) || (d.dir === 'in' ? '其他收入' : '待分类');
+  d.note = mkNote(d.seg, d.raw, d.cat);
+}
+
+function parseSeg(seg) {
+  if (TRANSFER.test(seg)) return { transfer: true, seg };
+  const am = extractAmount(seg) || {};
+  let dir = null;
+  if (INC.test(seg)) dir = 'in';
+  else if (matchCat(seg, 'out') || EXP.test(seg)) dir = 'out';
+  const hint = !!(dir || matchCat(seg, 'out') || matchCat(seg, 'in'));
+  if (am.amount == null && !am.amb && !hint) return null;
+  const d = { seg, dir, amount: am.amount ?? null, amb: !!am.amb, raw: am.raw, off: dateOf(seg), pay: null };
+  if (dir) fixCat(d); else { d.cat = null; d.note = mkNote(seg, am.raw, ''); }
+  d.need = d.amount == null ? 'amount' : (!d.dir ? 'dir' : null);
+  return d;
+}
+
+function parseEntry(text) {
+  const segs = text.split(/[,，、;；。\n]+|然后|还有|以及/).map(s => s.trim()).filter(Boolean);
+  const ds = []; let prev = null, transfer = false;
+  for (const s of segs) {
+    const d = parseSeg(s);
+    if (!d) continue;
+    if (d.transfer) { transfer = true; continue; }
+    if (d.off == null) d.off = prev ?? 0; else prev = d.off;
+    ds.push(d);
+  }
+  if (!ds.some(d => d.amount != null || d.amb)) return { drafts: [], transfer };
+  const now = new Date();
+  ds.forEach(d => { d.date = ymd(addD(now, d.off)); });
+  return { drafts: ds, transfer };
+}
+//#PARSER-END
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const KEY = 'suikouji-demo-v1';
+  const SEED = [
+    [1, 'out', 23, '交通出行', '打车'], [1, 'out', 36, '餐饮', '午饭 牛肉面'], [2, 'out', 18, '餐饮', '中午吃饭'],
+    [2, 'out', 12, '零食饮品', '奶茶'], [3, 'out', 45, '学习', '买书'], [3, 'out', 64, '餐饮', '晚饭 火锅'],
+    [5, 'in', 5200, '工资', '工资到账'], [5, 'out', 128, '购物', '日用品'], [6, 'out', 9, '餐饮', '早餐'],
+    [7, 'out', 39, '娱乐', '电影票'], [8, 'out', 3, '交通出行', '地铁'], [9, 'out', 56, '餐饮', '朋友聚餐'],
+    [10, 'in', 300, '兼职收入', '兼职'], [11, 'out', 85, '居家', '电费'], [12, 'out', 22, '餐饮', '外卖'],
+    [14, 'out', 168, '购物', '买衣服'], [17, 'out', 15, '零食饮品', '咖啡'], [20, 'out', 32, '交通出行', '打车'],
+    [24, 'out', 880, '居家', '房租'], [27, 'in', 5200, '工资', '上月工资'], [30, 'out', 42, '餐饮', '晚饭'],
+    [33, 'out', 19, '零食饮品', '奶茶'], [36, 'out', 260, '医疗', '挂号买药'], [40, 'out', 75, '娱乐', 'KTV'],
+    [44, 'out', 29, '交通出行', '滴滴']
+  ];
+  const SAMPLES = ['中午吃饭18，奶茶12，地铁3块', '昨天买书花了45元', '晚上吃饭花了一百多', null, '兼职工资到账800元'];
+  const TRY = ['今天早餐8块5', '中午吃饭18，奶茶12，地铁3块', '晚上吃饭花了一百多', '兼职工资到账800元',
+    '把奶茶改到零食饮品', '刚才那笔不是18，是16', '撤销刚才那笔', '这个月花了多少钱？', '这周吃饭花了多少？',
+    '昨天都买了什么？', '这个月和上个月相比多花了多少？'];
+  const PAYS = ['微信', '支付宝', '银行卡', '现金'];
+
+  let msgs = [], mid = 0, uidn = 0, lastBatch = [], pending = null, tab = 'chat';
+  const ym0 = () => ymd(new Date()).slice(0, 7);
+  let bf = { ym: ym0(), dir: 'all', cat: 'all', q: '', range: null };
+  let stYm = ym0(), meAskCat = null, meAskClear = false, sheetCtx = null, tt = null;
+  let voiceMode = false, recording = false, recStart = 0, si = 0;
+
+  const uid = () => 'b' + Date.now().toString(36) + (++uidn);
+  const sgn = b => (b.dir === 'in' ? '+' : '−');
+  const catsFor = dir => [...(dir === 'in' ? S.catsIn : S.catsOut), '待分类'];
+  const colorOf = c => { const i = [...S.catsOut, ...S.catsIn].indexOf(c); return i < 0 ? 'var(--c8)' : `var(--c${(i % 8) + 1})`; };
+  const dl = d => {
+    const t = ymd(new Date());
+    if (d === t) return '今天';
+    if (d === ymd(addD(new Date(), -1))) return '昨天';
+    if (d === ymd(addD(new Date(), -2))) return '前天';
+    return `${+d.slice(5, 7)}月${+d.slice(8)}日`;
+  };
+  const wk = d => '周' + '日一二三四五六'[new Date(d + 'T00:00:00').getDay()];
+
+  function load() {
+    try {
+      const r = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (r && Array.isArray(r.bills)) {
+        S.bills = r.bills; S.catsOut = r.catsOut || S.catsOut;
+        S.prefs = Object.assign(S.prefs, r.prefs || {}); S.voiceOK = !!r.voiceOK;
+        return true;
+      }
+    } catch (e) { /* storage unavailable */ }
+    return false;
+  }
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify({ bills: S.bills, catsOut: S.catsOut, prefs: S.prefs, voiceOK: S.voiceOK })); } catch (e) { /* ignore */ }
+  }
+  function seed() {
+    const now = new Date();
+    S.bills = SEED.map(([a, dir, amount, cat, note], i) => ({
+      id: 's' + i, dir, amount, cat, date: ymd(addD(now, -a)), note, pay: null,
+      createdAt: Date.now() - a * 86400000 - 3600000, src: 'text'
+    }));
+  }
+  function toast(m) {
+    const t = $('#toast'); t.textContent = m; t.hidden = false;
+    clearTimeout(tt); tt = setTimeout(() => { t.hidden = true; }, 2000);
+  }
+
+  /* ---------- chat rendering ---------- */
+  function addMsg(m) { m.id = ++mid; msgs.push(m); renderChat(true); return m; }
+  function botSay(text, choices, exclusive) { return addMsg({ role: 'bot', kind: 'text', text, choices, exclusive }); }
+
+  function cardHtml(b, gone) {
+    const todo = b.cat === '待分类';
+    return `<div class="card ${gone ? 'gone' : ''}">
+      <div class="c-top"><span class="c-cat ${todo ? 'todo' : ''}">${esc(b.cat)}</span><span class="c-amt ${b.dir}">${sgn(b)}${money(b.amount)}</span></div>
+      <div class="c-meta">${dl(b.date)} · ${esc(b.note || '无备注')} · 支付方式：${esc(b.pay || '未填写')}${b.src === 'voice' ? ' · 语音' : ''}</div>
+      <div class="c-act">${gone ? '<span>已撤销</span>' : `<button data-act="edit" data-bid="${b.id}">修改</button><button data-act="undo" data-bid="${b.id}">撤销</button>`}</div>
+    </div>`;
+  }
+  function billsHtml(m) {
+    const cur = m.items.map(i => S.bills.find(b => b.id === i.id) || i);
+    const alive = m.items.filter(i => S.bills.some(b => b.id === i.id));
+    const n = cur.length;
+    const out = cur.filter(i => i.dir === 'out').reduce((s, i) => s + i.amount, 0);
+    const inn = cur.filter(i => i.dir === 'in').reduce((s, i) => s + i.amount, 0);
+    let head = '已记账';
+    if (n > 1) {
+      const parts = [];
+      if (out) parts.push('支出 ' + money(out));
+      if (inn) parts.push('收入 ' + money(inn));
+      head = `已记账 ${n} 笔，合计${parts.join('、')}`;
+    }
+    if (alive.length < n) head += `（已撤销 ${n - alive.length} 笔）`;
+    let batch = '';
+    if (n > 1 && alive.length) batch = `<button class="lnk" data-act="undoBatch" data-mid="${m.id}">${m.confirm ? '确认整批撤销？再点一次' : '整批撤销'}</button>`;
+    return `<div class="hd"><span>${esc(head)}</span>${batch}</div>` +
+      cur.map((b, i) => cardHtml(b, !S.bills.some(x => x.id === m.items[i].id))).join('');
+  }
+  function holdCard(d, extra) {
+    return `<div class="card hold"><div class="c-top"><span class="c-cat todo">待确认</span><span class="c-amt ${d.dir}">${sgn(d)}${money(d.amount)}</span></div>
+      <div class="c-meta">${esc(d.cat)} · ${dl(d.date)} · ${esc(d.note || '无备注')}</div>${extra}</div>`;
+  }
+  function renderMsg(m) {
+    if (m.role === 'me') return `<div class="row me"><div class="bubble me">${m.src === 'voice' ? '<span class="tag">语音</span>' : ''}${esc(m.text)}</div></div>`;
+    if (m.kind === 'bills') return `<div class="row"><div class="stack">${billsHtml(m)}</div></div>`;
+    if (m.kind === 'dup') {
+      return `<div class="row"><div class="stack"><div class="hd"><span>这笔和刚才记过的很像，请核对后决定是否保留</span></div>` +
+        m.drafts.map((d, i) => holdCard(d, m.state[i] === 'wait'
+          ? `<div class="c-act"><button data-act="dupKeep" data-mid="${m.id}" data-i="${i}">仍然保存</button><button data-act="dupDrop" data-mid="${m.id}" data-i="${i}">不保存</button></div>`
+          : `<div class="c-act"><span>${m.state[i] === 'kept' ? '已保存' : '已放弃，没有记账'}</span></div>`)).join('') +
+        '</div></div>';
+    }
+    if (m.kind === 'fail') {
+      const tot = m.drafts.reduce((s, d) => s + d.amount, 0);
+      return `<div class="row"><div class="stack"><div class="card err"><b>保存失败</b>
+        <div class="c-meta">${m.drafts.length} 笔账单（${money(tot)}）没有记入账单。${m.drafts.map(d => esc(d.note || d.cat)).join('、')}</div>
+        <div class="c-act">${m.state === 'ok' ? '<span>已重新保存成功</span>' : `<button data-act="retry" data-mid="${m.id}">重试保存</button>`}</div></div></div></div>`;
+    }
+    const ch = m.choices ? '<div>' + m.choices.map((c, i) =>
+      `<button class="pill ${c.solid ? 'solid' : ''}" data-act="choice" data-mid="${m.id}" data-ci="${i}" ${m.done ? 'disabled' : ''}>${esc(c.label)}</button>`).join('') + '</div>' : '';
+    return `<div class="row"><div class="bubble">${esc(m.text).replace(/\n/g, '<br>')}${ch}</div></div>`;
+  }
+  function renderChat(force) {
+    const box = $('#msgs');
+    const stick = force || box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+    const old = box.scrollTop;
+    box.innerHTML = msgs.map(renderMsg).join('');
+    box.scrollTop = stick ? box.scrollHeight : old;
+  }
+
+  /* ---------- saving ---------- */
+  function isDup(d) {
+    return S.bills.some(b => b.dir === d.dir && b.amount === d.amount && Date.now() - b.createdAt < 10 * 60000 && (b.note === d.note || b.cat === d.cat));
+  }
+  function attemptSave(drafts, src, retry) {
+    if (S.prefs.fail) {
+      if (retry) { toast('仍然保存失败，请稍后再试'); return false; }
+      addMsg({ role: 'bot', kind: 'fail', drafts, src }); return false;
+    }
+    const items = drafts.map(d => ({ id: uid(), dir: d.dir, amount: d.amount, cat: d.cat, date: d.date, note: d.note, pay: d.pay || null, createdAt: Date.now(), src }));
+    S.bills.push(...items); persist(); lastBatch = items.map(i => i.id);
+    addMsg({ role: 'bot', kind: 'bills', items: items.map(i => ({ ...i })) });
+    renderAll(); return true;
+  }
+  function commit(drafts, src) {
+    const ok = [], dups = [];
+    drafts.forEach(d => (S.prefs.dup && isDup(d) ? dups : ok).push(d));
+    if (ok.length) attemptSave(ok, src);
+    if (dups.length) addMsg({ role: 'bot', kind: 'dup', drafts: dups, src, state: dups.map(() => 'wait') });
+  }
+  function removeBill(id) { S.bills = S.bills.filter(b => b.id !== id); persist(); renderAll(); }
+
+  /* ---------- follow-up questions ---------- */
+  function reply(t) { addMsg({ role: 'me', text: t }); answerPending(t); }
+  function askNext() {
+    const d = pending.drafts.find(x => x.need);
+    if (!d) { const ds = pending.drafts, src = pending.src; pending = null; commit(ds, src); return; }
+    const label = d.note || d.seg;
+    if (d.need === 'amount') botSay(d.amb ? `这笔“${label}”的具体金额是多少？` : `“${label}”花了多少钱？`);
+    else botSay(`“${d.seg}”是收入还是支出？`, [{ label: '支出', fn: () => reply('支出') }, { label: '收入', fn: () => reply('收入') }]);
+  }
+  function answerPending(t) {
+    if (/^(取消|算了|不记了|不用了)/.test(t)) { pending = null; botSay('好的，已取消，这次没有记账。'); return; }
+    const d = pending.drafts.find(x => x.need);
+    if (d.need === 'amount') {
+      const a = extractAmount(t.replace(/^[是为]/, ''));
+      if (!a || a.amb || !a.amount) { botSay('还没看到具体金额，请回复数字，例如 108 或 一百零八块。要放弃的话回复“取消”。'); return; }
+      d.amount = a.amount; d.amb = false; d.need = d.dir ? null : 'dir';
+    } else {
+      let dir = null;
+      if (/收入|到账|收到|赚|进账/.test(t)) dir = 'in'; else if (/支出|花|付|买|消费/.test(t)) dir = 'out';
+      if (!dir) { botSay('请告诉我这是“收入”还是“支出”。'); return; }
+      d.dir = dir; fixCat(d); d.need = d.amount == null ? 'amount' : null;
+    }
+    askNext();
+  }
+
+  /* ---------- commands ---------- */
+  const aliveLast = () => lastBatch.map(id => S.bills.find(b => b.id === id)).filter(Boolean);
+  function pick(bs, fn, q) {
+    if (!bs.length) { botSay('没有找到对应的账单。'); return; }
+    if (bs.length === 1) { fn(bs[0]); return; }
+    botSay(q, bs.slice(0, 6).map(b => ({ label: `${dl(b.date)} ${b.note || b.cat} ${money(b.amount)}`, fn: () => fn(b) })));
+  }
+  function doUndo() {
+    const bs = aliveLast();
+    if (!bs.length) { botSay('最近没有可以撤销的记录。更早的账单可以在“账单”页删除。'); return; }
+    if (bs.length === 1) { removeBill(bs[0].id); botSay(`已撤销：${bs[0].cat} ${sgn(bs[0])}${money(bs[0].amount)}。`); return; }
+    const tot = bs.reduce((s, b) => s + b.amount, 0);
+    botSay(`刚才记了 ${bs.length} 笔，要撤销哪一笔？`, [
+      { label: `整批撤销（${bs.length} 笔，${money(tot)}）`, solid: true, fn: () => { bs.forEach(b => removeBill(b.id)); botSay(`已整批撤销 ${bs.length} 笔。`); } },
+      ...bs.map(b => ({ label: `${b.note || b.cat} ${money(b.amount)}`, fn: () => { removeBill(b.id); botSay(`已撤销：${b.note || b.cat} ${money(b.amount)}。`); } }))
+    ]);
+  }
+  function doFixAmount(t) {
+    const nums = [...t.matchAll(new RegExp(NUM, 'g'))].map(m => cn2n(m[0])).filter(v => v > 0);
+    if (!nums.length) { botSay('请告诉我改成多少，例如“刚才那笔改成16”。'); return; }
+    const v = round2(nums[nums.length - 1]);
+    pick(aliveLast(), b => { b.amount = v; persist(); renderAll(); botSay(`已修改：${b.note || b.cat} 金额改为 ${money(v)}。`); }, '刚才记了多笔，要改哪一笔？');
+  }
+  function doFixCat(t) {
+    const m = t.match(/^把(.+?)(?:这笔|那笔|这个)?(?:改到|改成|改为|归到|归为)(.+?)(?:里|类|分类)?$/);
+    if (!m) { botSay('可以这样说：“把奶茶改到零食饮品”。'); return; }
+    const kw = m[1].trim(), target = m[2].trim();
+    const all = [...S.catsOut, ...S.catsIn, '待分类'];
+    const cat = all.find(c => c === target) || all.find(c => target.includes(c) || c.includes(target));
+    if (!cat) { botSay(`没有“${target}”这个分类，可以先在“我的”里添加。`); return; }
+    let bs = S.bills.filter(b => (b.note || '').includes(kw) || b.cat.includes(kw)).sort((a, b) => b.createdAt - a.createdAt);
+    const recent = bs.filter(b => lastBatch.includes(b.id));
+    if (recent.length) bs = recent;
+    pick(bs, b => {
+      const own = b.dir === 'in' ? S.catsIn : S.catsOut;
+      if (cat !== '待分类' && !own.includes(cat)) { botSay(`“${cat}”和这笔账单的收支方向不一致，没有修改。`); return; }
+      b.cat = cat; persist(); renderAll(); botSay(`已修改：${b.note || '这笔'} 归到“${cat}”。`);
+    }, `“${kw}”对应多笔账单，要改哪一笔？`);
+  }
+
+  /* ---------- chat query ---------- */
+  function mk(label, a, b) { return { label, from: ymd(a), to: ymd(b) }; }
+  function periodOf(t) {
+    const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+    const mon = d => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+    if (/上个月|上月/.test(t)) return mk('上个月', new Date(y, m - 1, 1), new Date(y, m, 0));
+    if (/这周|本周|这星期|这个星期/.test(t)) { const a = mon(now); return mk('本周', a, addD(a, 6)); }
+    if (/上周|上星期/.test(t)) { const a = addD(mon(now), -7); return mk('上周', a, addD(a, 6)); }
+    if (/昨天|昨日/.test(t)) return mk('昨天', addD(now, -1), addD(now, -1));
+    if (/今天|今日/.test(t)) return mk('今天', now, now);
+    if (/今年/.test(t)) return mk('今年', new Date(y, 0, 1), new Date(y, 11, 31));
+    return mk('本月', new Date(y, m, 1), new Date(y, m + 1, 0));
+  }
+  const rangeText = p => { const f = s => `${+s.slice(5, 7)}月${+s.slice(8)}日`; return p.from === p.to ? f(p.from) : `${f(p.from)}–${f(p.to)}`; };
+  const inR = (b, p) => b.date >= p.from && b.date <= p.to;
+  function qcat(t) {
+    for (const c of S.catsOut) if (t.includes(c)) return c;
+    for (const [c, re] of KW_OUT) if (re.test(t) && S.catsOut.includes(c)) return c;
+    return null;
+  }
+  function openBills(f) {
+    bf = { ym: f.ym || ym0(), dir: f.dir || 'all', cat: f.cat || 'all', q: '', range: f.range || null };
+    $('#b-q').value = ''; setTab('bills');
+  }
+  function doQuery(t) {
+    if (/相比|比上个月|比上月|和上个月|跟上个月/.test(t)) {
+      const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+      const a = mk('本月', new Date(y, m, 1), new Date(y, m + 1, 0)), b = mk('上月', new Date(y, m - 1, 1), new Date(y, m, 0));
+      const sa = S.bills.filter(x => x.dir === 'out' && inR(x, a)), sb = S.bills.filter(x => x.dir === 'out' && inR(x, b));
+      const ta = sa.reduce((s, x) => s + x.amount, 0), tb = sb.reduce((s, x) => s + x.amount, 0);
+      const go = [{ label: '查看本月明细', fn: () => openBills({ ym: ym0(), dir: 'out' }) }];
+      if (!sb.length) { botSay(`上个月暂无账单，没法比较。本月支出 ${money(ta)}（${sa.length} 笔）。`, go, false); return; }
+      const diff = ta - tb, pct = Math.round(Math.abs(diff) / tb * 100);
+      botSay(`本月支出 ${money(ta)}（${sa.length} 笔，本月还没过完），上个月支出 ${money(tb)}（${sb.length} 笔）。\n比上个月${diff >= 0 ? '多' : '少'}花 ${money(Math.abs(diff))}，约 ${pct}%。`, go, false);
+      return;
+    }
+    const p = periodOf(t), dir = /收入|赚|工资/.test(t) ? 'in' : 'out', cat = dir === 'out' ? qcat(t) : null;
+    const bs = S.bills.filter(b => b.dir === dir && inR(b, p) && (!cat || b.cat === cat)).sort((x, y) => y.date.localeCompare(x.date) || y.createdAt - x.createdAt);
+    const rt = rangeText(p), word = dir === 'in' ? '收入' : '支出';
+    if (!bs.length) { botSay(`该时间段暂无账单（${p.label}，${rt}${cat ? '，' + cat : ''}）。`); return; }
+    const tot = bs.reduce((s, b) => s + b.amount, 0);
+    const go = [{ label: '查看明细', fn: () => openBills({ ym: p.from.slice(0, 7), dir, cat: cat || 'all', range: p.label === '本月' || p.label === '上个月' ? null : { from: p.from, to: p.to } }) }];
+    if (/买了什么|都买了|明细/.test(t)) {
+      const lines = bs.slice(0, 8).map(b => `${b.cat} ${money(b.amount)} ${b.note || ''}`.trim());
+      botSay(`${p.label}（${rt}）共 ${bs.length} 笔，合计 ${money(tot)}：\n${lines.join('\n')}${bs.length > 8 ? '\n……' : ''}`, go, false);
+    } else {
+      botSay(`${p.label}（${rt}）${cat ? cat : ''}${word} ${money(tot)}，共 ${bs.length} 笔。`, go, false);
+    }
+  }
+
+  /* ---------- routing ---------- */
+  function send(text, src) {
+    text = text.trim(); if (!text) return;
+    addMsg({ role: 'me', text, src });
+    route(text, src || 'text');
+  }
+  function route(t, src) {
+    if (pending) { answerPending(t); return; }
+    if (/撤销|撤回|删掉刚才|删除刚才|取消刚才/.test(t)) return doUndo();
+    if (/(刚才|上一笔|上笔|那笔)/.test(t) && /不是|改成|改为|应该是|应为|其实是/.test(t)) return doFixAmount(t);
+    if (/^把.+(改到|改成|改为|归到|归为).+/.test(t)) return doFixCat(t);
+    if (/多少|买了什么|相比|结余/.test(t)) return doQuery(t);
+    const r = parseEntry(t);
+    if (r.drafts.length) {
+      pending = { drafts: r.drafts, src }; askNext();
+      if (r.transfer) botSay('另外，账户间转账不计入收支统计，那一条没有记账。');
+      return;
+    }
+    if (r.transfer) { botSay('账户间转账不计入收支统计，这条没有记账。如果是转给别人的一笔消费，请告诉我用途和金额。'); return; }
+    botSay('没有识别到金额。可以这样说：“午饭18元”或“兼职工资到账800元”。');
+  }
+
+  /* ---------- bills / stats / me ---------- */
+  const shiftYm = (ym, d) => { const [y, m] = ym.split('-').map(Number); return ymd(new Date(y, m - 1 + d, 1)).slice(0, 7); };
+  const ymLabel = ym => `${ym.slice(0, 4)}年${+ym.slice(5)}月`;
+  function filtered() {
+    return S.bills.filter(b => {
+      if (bf.range) { if (b.date < bf.range.from || b.date > bf.range.to) return false; }
+      else if (b.date.slice(0, 7) !== bf.ym) return false;
+      if (bf.dir !== 'all' && b.dir !== bf.dir) return false;
+      if (bf.cat !== 'all' && b.cat !== bf.cat) return false;
+      if (bf.q && !(b.note || '').includes(bf.q) && !b.cat.includes(bf.q)) return false;
+      return true;
+    }).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+  }
+  function renderBills() {
+    const list = filtered();
+    $('#b-month').textContent = bf.range ? '自定义范围' : ymLabel(bf.ym);
+    $('#b-out').textContent = money(list.filter(b => b.dir === 'out').reduce((s, b) => s + b.amount, 0));
+    $('#b-in').textContent = money(list.filter(b => b.dir === 'in').reduce((s, b) => s + b.amount, 0));
+    document.querySelectorAll('#b-seg button').forEach(b => b.classList.toggle('on', b.dataset.f === bf.dir));
+    const sel = $('#b-cat');
+    sel.innerHTML = '<option value="all">全部类别</option>' + [...S.catsOut, ...S.catsIn, '待分类'].map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    sel.value = bf.cat;
+    if (sel.value !== bf.cat) { bf.cat = 'all'; sel.value = 'all'; }
+    $('#b-range').innerHTML = bf.range ? `<span class="rangechip">范围 ${rangeText(bf.range)}<button data-act="clrrange" aria-label="清除范围">×</button></span>` : '';
+    if (!list.length) { $('#b-list').innerHTML = '<div class="empty">该时间段暂无账单</div>'; return; }
+    const dayOut = {};
+    list.forEach(b => { if (b.dir === 'out') dayOut[b.date] = (dayOut[b.date] || 0) + b.amount; });
+    let html = '', cur = '';
+    for (const b of list) {
+      if (b.date !== cur) { cur = b.date; html += `<div class="day"><span>${dl(b.date)} ${wk(b.date)} · ${b.date.slice(5)}</span><span>${dayOut[b.date] ? '支出 ' + money(dayOut[b.date]) : ''}</span></div>`; }
+      html += `<button class="item" data-act="edit" data-bid="${b.id}"><span class="dot" style="background:${colorOf(b.cat)}">${esc(b.cat.slice(0, 1))}</span>
+        <span class="mid"><b>${esc(b.note || b.cat)}</b><small>${esc(b.cat)}${b.pay ? ' · ' + esc(b.pay) : ''}</small></span>
+        <span class="amt ${b.dir}">${sgn(b)}${money(b.amount)}</span></button>`;
+    }
+    $('#b-list').innerHTML = html;
+  }
+  function renderStats() {
+    $('#s-month').textContent = ymLabel(stYm);
+    const bs = S.bills.filter(b => b.date.slice(0, 7) === stYm);
+    const body = $('#s-body');
+    if (!bs.length) { body.innerHTML = '<div class="empty">该时间段暂无账单</div>'; return; }
+    const outs = bs.filter(b => b.dir === 'out'), tout = outs.reduce((s, b) => s + b.amount, 0), tin = bs.filter(b => b.dir === 'in').reduce((s, b) => s + b.amount, 0);
+    const bal = tin - tout;
+    let html = `<div class="tiles"><div class="tile"><small>支出</small><b>${money(tout)}</b></div><div class="tile"><small>收入</small><b>${money(tin)}</b></div><div class="tile"><small>结余</small><b>${bal < 0 ? '−' : ''}${money(Math.abs(bal))}</b></div></div>`;
+    const by = {}; outs.forEach(b => { by[b.cat] = (by[b.cat] || 0) + b.amount; });
+    const rows = Object.entries(by).sort((a, b) => b[1] - a[1]);
+    html += '<div class="box"><h3>支出分类占比</h3>';
+    if (!rows.length) html += '<div class="empty">本月暂无支出</div>';
+    else {
+      const C = 2 * Math.PI * 44; let off = 0;
+      const arcs = rows.map(([c, v]) => { const dash = v / tout * C; const s = `<circle cx="60" cy="60" r="44" fill="none" stroke="${colorOf(c)}" stroke-width="18" stroke-dasharray="${dash.toFixed(2)} ${(C - dash).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 60 60)"/>`; off += dash; return s; }).join('');
+      html += `<div class="donutrow"><svg viewBox="0 0 120 120" role="img" aria-label="支出分类占比">${arcs}<text x="60" y="58" text-anchor="middle" font-size="9" fill="var(--ink2)">总支出</text><text x="60" y="72" text-anchor="middle" font-size="11" font-family="var(--f-num)" fill="var(--ink)">${Math.round(tout)}</text></svg>
+        <div class="legend">${rows.slice(0, 6).map(([c, v]) => `<div><i style="background:${colorOf(c)}"></i><span>${esc(c)}</span><em>${Math.round(v / tout * 100)}% ${money(v)}</em></div>`).join('')}</div></div>`;
+    }
+    html += '</div>';
+    const [yy, mm] = stYm.split('-').map(Number), n = new Date(yy, mm, 0).getDate();
+    const per = Array(n).fill(0); outs.forEach(b => { per[+b.date.slice(8) - 1] += b.amount; });
+    const mx = Math.max(...per, 1), W = 340, H = 110, bw = (W - 8) / n;
+    const todayYm = ym0(), elapsed = stYm === todayYm ? new Date().getDate() : n;
+    const bars = per.map((v, i) => { const h = v / mx * (H - 20); return v ? `<rect x="${(4 + i * bw + 1).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${Math.max(bw - 2, 1).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="var(--accent)" opacity="${v === mx ? 1 : .6}"/>` : ''; }).join('');
+    const ticks = [1, 8, 15, 22, n].filter((d, i, a) => a.indexOf(d) === i).map(d => `<text x="${(4 + (d - 1) * bw + bw / 2).toFixed(1)}" y="${H + 14}" text-anchor="middle" font-size="9" fill="var(--ink2)">${d}日</text>`).join('');
+    html += `<div class="box trend"><h3>每日支出趋势</h3><svg viewBox="0 0 ${W} ${H + 20}" role="img" aria-label="每日支出趋势"><text x="4" y="9" font-size="9" fill="var(--ink2)">最高 ${money(mx)}</text><line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>${bars}${ticks}</svg>
+      <div class="c-meta">日均支出 ${money(tout / elapsed)}（按已过 ${elapsed} 天计算）</div></div>`;
+    body.innerHTML = html;
+  }
+  function renderMe() {
+    const sw = (id, on) => `<label class="sw"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><span></span></label>`;
+    $('#me-body').innerHTML = `
+      <div class="sec"><h3>分类管理</h3><p>支出分类。删除后，该分类下的账单会变为“待分类”。</p>
+        <div class="cats">${S.catsOut.map(c => `<span>${esc(c)}<button data-act="delcat" data-c="${esc(c)}" class="${meAskCat === c ? 'ask' : ''}" aria-label="删除${esc(c)}">${meAskCat === c ? '确认删除' : '×'}</button></span>`).join('')}</div>
+        <div class="addcat"><input id="newcat" maxlength="8" placeholder="新增支出分类" aria-label="新分类名称"><button class="btn" data-act="addcat">添加</button></div></div>
+      <div class="sec"><h3>记账偏好</h3>
+        <div class="prow"><div>重复记录提醒<small>短时间内出现相同金额和相似内容时，先让你核对</small></div>${sw('p-dup', S.prefs.dup)}</div>
+        <div class="prow"><div>模拟保存失败（演示用）<small>开启后记账会失败，可在聊天里点“重试保存”</small></div>${sw('p-fail', S.prefs.fail)}</div></div>
+      <div class="sec"><h3>隐私设置</h3>
+        <p>语音只用于识别你说的账目，原始录音在识别后不保留。识别出的文字会交给智能理解服务整理成账单，只使用你自己记录的账单做统计和查询。</p>
+        <div class="prow"><div>语音记账授权<small>${S.voiceOK ? '已授权' : '未授权，首次使用语音时会询问'}</small></div>${S.voiceOK ? '<button class="btn" data-act="revoke">撤销授权</button>' : ''}</div></div>
+      <div class="sec"><h3>数据管理</h3><p>当前共有 ${S.bills.length} 笔账单，数据只保存在这个浏览器里。</p>
+        <div class="prow"><button class="btn" data-act="reseed">恢复示例数据</button>
+        <button class="btn danger ${meAskClear ? 'ask' : ''}" data-act="clear">${meAskClear ? `确认清空 ${S.bills.length} 笔？` : '清空全部账单'}</button></div></div>`;
+  }
+  function renderAll() { renderChat(); renderBills(); renderStats(); renderMe(); }
+
+  /* ---------- edit sheet ---------- */
+  function drawSheet(v) {
+    const c = sheetCtx, cats = catsFor(c.dir);
+    $('#sheetWrap').innerHTML = `<div class="sheet" role="dialog" aria-label="修改账单"><h3>修改账单</h3>
+      <div class="seg" style="align-self:flex-start"><button type="button" data-act="sdir" data-d="out" class="${c.dir === 'out' ? 'on' : ''}">支出</button><button type="button" data-act="sdir" data-d="in" class="${c.dir === 'in' ? 'on' : ''}">收入</button></div>
+      <label>金额（元）<input id="f-amt" inputmode="decimal" value="${esc(v.amount)}"></label>
+      <label>分类<select id="f-cat">${cats.map(x => `<option ${x === v.cat ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
+      <label>发生日期<input id="f-date" type="date" value="${esc(v.date)}"></label>
+      <label>备注<input id="f-note" value="${esc(v.note)}"></label>
+      <label>支付方式（可选）<select id="f-pay"><option value="">未填写</option>${PAYS.map(x => `<option ${x === v.pay ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+      <div class="btns"><button type="button" class="btn danger ${c.askDel ? 'ask' : ''}" data-act="sdel">${c.askDel ? '确认删除' : '删除'}</button>
+      <span><button type="button" class="btn" data-act="sclose">取消</button> <button type="button" class="btn primary" data-act="ssave">保存</button></span></div></div>`;
+    $('#sheetWrap').hidden = false;
+  }
+  function readSheet() {
+    return { amount: $('#f-amt').value, cat: $('#f-cat').value, date: $('#f-date').value, note: $('#f-note').value, pay: $('#f-pay').value };
+  }
+  function openEdit(id) {
+    const b = S.bills.find(x => x.id === id); if (!b) return;
+    sheetCtx = { id, dir: b.dir, askDel: false };
+    drawSheet({ amount: b.amount, cat: b.cat, date: b.date, note: b.note || '', pay: b.pay || '' });
+  }
+  function closeSheet() { $('#sheetWrap').hidden = true; $('#sheetWrap').innerHTML = ''; sheetCtx = null; }
+
+  /* ---------- tabs & voice ---------- */
+  const ICON = {
+    chat: '<path d="M4 5h16v11H9l-5 4z"/>', bills: '<path d="M5 6h14M5 12h14M5 18h14"/>',
+    stats: '<path d="M5 19V9M12 19V5M19 19v-7"/>', me: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+    kb: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>'
+  };
+  const TABS = [['chat', '记账', '随口记'], ['bills', '账单', '账单'], ['stats', '统计', '统计'], ['me', '我的', '我的']];
+  function setTab(t) {
+    tab = t;
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + t));
+    $('#navTitle').textContent = TABS.find(x => x[0] === t)[2];
+    $('#tabs').innerHTML = TABS.map(([k, l]) => `<button data-act="tab" data-tab="${k}" class="${k === t ? 'on' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${l}</button>`).join('');
+    renderAll();
+    if (t === 'chat') { const b = $('#msgs'); b.scrollTop = b.scrollHeight; }
+  }
+  function applyMode() {
+    $('#txt').hidden = voiceMode; $('#hold').hidden = !voiceMode; $('#sendBtn').hidden = voiceMode;
+    $('#modeBtn').innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${voiceMode ? ICON.kb : ICON.mic}</svg>`;
+    if (!voiceMode) $('#voicePanel').hidden = true;
+  }
+  function voicePanel(html) { const p = $('#voicePanel'); p.innerHTML = html; p.hidden = false; }
+  function startRec(e) {
+    if (recording) return;
+    recording = true; recStart = Date.now();
+    const h = $('#hold'); h.classList.add('rec'); h.textContent = '松开 结束';
+    try { h.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
+    voicePanel('<div class="vh">正在听，松开结束</div><div class="wave">' + '<i></i>'.repeat(20) + '</div>');
+  }
+  function endRec() {
+    if (!recording) return;
+    recording = false;
+    const h = $('#hold'); h.classList.remove('rec'); h.textContent = '按住 说话';
+    if (Date.now() - recStart < 500) { $('#voicePanel').hidden = true; toast('说话时间太短，请按住再说'); return; }
+    voicePanel('<div class="vh">识别中…</div>');
+    setTimeout(() => {
+      const s = SAMPLES[si++ % SAMPLES.length];
+      if (s == null) { voicePanel('<div class="vh">没听清，请再说一次，或直接用文字输入。</div><div class="vbtns"><button data-act="vcancel">知道了</button></div>'); return; }
+      voicePanel(`<div class="vh">识别结果，发送前可以修改（演示未接入真实麦克风，使用示例语音文本）</div><textarea id="vtxt" aria-label="识别结果">${esc(s)}</textarea><div class="vbtns"><button data-act="vcancel">重录</button><button class="go" data-act="vsend">发送</button></div>`);
+    }, 800);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', e => {
+    const wrap = $('#sheetWrap');
+    if (e.target === wrap) { closeSheet(); return; }
+    const el = e.target.closest('[data-act]'); if (!el) return;
+    const d = el.dataset, m = d.mid ? msgs.find(x => x.id === +d.mid) : null;
+    switch (d.act) {
+      case 'tab': setTab(d.tab); break;
+      case 'chip': setTab('chat'); send(d.t); break;
+      case 'edit': openEdit(d.bid); break;
+      case 'undo': { const b = S.bills.find(x => x.id === d.bid); if (b) { removeBill(b.id); toast('已撤销，明细和统计已同步'); } break; }
+      case 'undoBatch':
+        if (!m.confirm) { m.confirm = true; renderChat(); break; }
+        m.items.forEach(i => { S.bills = S.bills.filter(b => b.id !== i.id); });
+        m.confirm = false; persist(); renderAll(); toast('已整批撤销'); break;
+      case 'choice': { const c = m.choices[+d.ci]; if (m.exclusive !== false) m.done = true; renderChat(); c.fn(); break; }
+      case 'retry': if (attemptSave(m.drafts, m.src, true)) { m.state = 'ok'; renderChat(); } break;
+      case 'dupKeep': if (m.state[+d.i] === 'wait') { m.state[+d.i] = 'kept'; attemptSave([m.drafts[+d.i]], m.src); renderChat(); } break;
+      case 'dupDrop': if (m.state[+d.i] === 'wait') { m.state[+d.i] = 'dropped'; renderChat(); } break;
+      case 'mon':
+        if (d.v === 'bills') { bf.range = null; bf.ym = shiftYm(bf.ym, +d.d); renderBills(); }
+        else { stYm = shiftYm(stYm, +d.d); renderStats(); }
+        break;
+      case 'dirf': bf.dir = d.f; renderBills(); break;
+      case 'clrrange': bf.range = null; renderBills(); break;
+      case 'delcat':
+        if (meAskCat !== d.c) { meAskCat = d.c; renderMe(); break; }
+        S.bills.forEach(b => { if (b.dir === 'out' && b.cat === d.c) b.cat = '待分类'; });
+        S.catsOut = S.catsOut.filter(c => c !== d.c); meAskCat = null; persist(); renderAll(); toast('分类已删除'); break;
+      case 'addcat': {
+        const v = $('#newcat').value.trim();
+        if (!v) { toast('请先输入分类名称'); break; }
+        if ([...S.catsOut, ...S.catsIn, '待分类'].includes(v)) { toast('已有同名分类'); break; }
+        S.catsOut.push(v); persist(); renderAll(); toast('已添加分类'); break;
+      }
+      case 'revoke': S.voiceOK = false; voiceMode = false; applyMode(); persist(); renderMe(); toast('已撤销语音授权'); break;
+      case 'reseed': seed(); lastBatch = []; persist(); meAskClear = false; renderAll(); toast('已恢复示例数据'); break;
+      case 'clear':
+        if (!meAskClear) { meAskClear = true; renderMe(); break; }
+        S.bills = []; lastBatch = []; meAskClear = false; persist(); renderAll(); toast('已清空全部账单'); break;
+      case 'sdir': { const v = readSheet(); sheetCtx.dir = d.d; v.cat = catsFor(d.d)[0]; drawSheet(v); break; }
+      case 'sdel':
+        if (!sheetCtx.askDel) { const v = readSheet(); sheetCtx.askDel = true; drawSheet(v); break; }
+        removeBill(sheetCtx.id); closeSheet(); toast('已删除账单'); break;
+      case 'sclose': closeSheet(); break;
+      case 'ssave': {
+        const v = readSheet(), amt = parseFloat(v.amount), b = S.bills.find(x => x.id === sheetCtx.id);
+        if (!(amt > 0)) { toast('请填写大于 0 的金额'); break; }
+        if (!v.date) { toast('请选择日期'); break; }
+        Object.assign(b, { dir: sheetCtx.dir, amount: round2(amt), cat: v.cat, date: v.date, note: v.note.trim(), pay: v.pay || null });
+        persist(); closeSheet(); renderAll(); toast('已保存修改，明细和统计已同步'); break;
+      }
+      case 'vyes': S.voiceOK = true; persist(); closeSheet(); voiceMode = true; applyMode(); renderMe(); break;
+      case 'vcancel': $('#voicePanel').hidden = true; break;
+      case 'vsend': { const t = $('#vtxt').value; $('#voicePanel').hidden = true; send(t, 'voice'); break; }
+    }
+  });
+  $('#composer').addEventListener('submit', e => { e.preventDefault(); const t = $('#txt').value; $('#txt').value = ''; send(t); });
+  $('#modeBtn').addEventListener('click', () => {
+    if (!voiceMode && !S.voiceOK) {
+      $('#sheetWrap').innerHTML = `<div class="sheet" role="dialog" aria-label="开启语音记账"><h3>开启语音记账</h3>
+        <p>录音只用于识别你说的账目，识别完成后不保留原始录音。识别出的文字会交给智能理解服务整理成账单。</p>
+        <p>你可以随时在“我的”页的隐私设置里撤销授权。</p>
+        <div class="btns"><button type="button" class="btn" data-act="sclose">暂不开启</button><button type="button" class="btn primary" data-act="vyes">同意并继续</button></div></div>`;
+      $('#sheetWrap').hidden = false; return;
+    }
+    voiceMode = !voiceMode; applyMode();
+  });
+  const hold = $('#hold');
+  hold.addEventListener('pointerdown', e => { e.preventDefault(); startRec(e); });
+  hold.addEventListener('pointerup', endRec);
+  hold.addEventListener('pointercancel', endRec);
+  hold.addEventListener('contextmenu', e => e.preventDefault());
+  $('#b-cat').addEventListener('change', e => { bf.cat = e.target.value; renderBills(); });
+  $('#b-q').addEventListener('input', e => { bf.q = e.target.value.trim(); renderBills(); });
+  $('#me-body').addEventListener('change', e => {
+    if (e.target.id === 'p-dup') S.prefs.dup = e.target.checked;
+    if (e.target.id === 'p-fail') S.prefs.fail = e.target.checked;
+    persist();
+  });
+
+  /* ---------- init ---------- */
+  if (!load()) { seed(); persist(); }
+  $('#chips').innerHTML = TRY.slice(0, 9).map(t => `<button data-act="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('');
+  $('#tryList').innerHTML = TRY.map(t => `<button data-act="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('');
+  botSay('你好，我是随口记。直接打字，或点左下角的话筒按住说话，像发消息一样告诉我收支就行。');
+  applyMode();
+  setTab('chat');
+})();
+</script>
+
+</body></html>
