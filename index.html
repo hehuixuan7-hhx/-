@@ -183,7 +183,7 @@ button{cursor:pointer}
 <div class="stage">
   <aside class="side">
     <h1>随口记</h1>
-    <p>像发消息一样记账。这是一个可操作的演示，数据只保存在当前浏览器里。</p>
+    <p>像发消息一样记账。这是一个可操作的演示，数据只保存在当前浏览器里，更新网页时保留。</p>
     <h2>点一下就能试</h2>
     <div class="try" id="tryList"></div>
     <h2>演示里已实现的规则</h2>
@@ -198,11 +198,13 @@ button{cursor:pointer}
     <header class="nav" id="navTitle">随口记</header>
     <div class="views">
       <section class="view on" id="v-chat">
-        <div id="msgs"></div>
+        <div id="storage-status" role="status" hidden style="padding:10px;background:var(--warn-soft);color:var(--warn)"></div><div id="msgs"></div>
         <div class="chips" id="chips"></div>
         <div id="voicePanel" hidden></div>
+        <input id="image-file" type="file" accept="image/*" hidden><input id="backup-file" type="file" accept=".json,application/json" hidden>
         <form class="composer" id="composer" autocomplete="off">
           <button type="button" class="ibtn" id="modeBtn" aria-label="切换文字和语音输入"></button>
+          <button type="button" class="ibtn" data-act="image-pick" aria-label="识别账单图片" title="识别账单图片"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 6-6 4 4 3-3 4 5"/></svg></button>
           <input type="text" id="txt" placeholder="" aria-label="记账内容">
           <button type="button" id="hold" hidden>按住 说话</button>
           <button type="submit" class="send" id="sendBtn">发送</button>
@@ -350,10 +352,51 @@ function parseSeg(seg) {
   return d;
 }
 
+// Speech recognition does not always insert punctuation between purchases.
+function splitSpokenBills(text) {
+  const parts = [];
+  for (const clause of text.split(/[,，、;；。！!？?\n]+|然后|还有|以及/)) {
+    if (!clause.trim()) continue;
+    const ends = [];
+    const pattern = new RegExp('(' + NUM + ')\\s*(?:(?:块钱|块|元|圆)(?:\\s*' + NUM + '\\s*(?:毛|角)?)?|毛|角)?', 'g');
+    let match;
+    while ((match = pattern.exec(clause))) {
+      const end = pattern.lastIndex;
+      const after = clause.slice(end), before = clause.slice(0, match.index);
+      // Do not split at quantities, dates, times, or identifiers.
+      if (/^\s*(?:年|月|日|号|点|时|分钟|秒|个|杯|份|瓶|张|次|天|本|件|碗|斤|公斤|公里|折|%|：|:)/.test(after)) continue;
+      if (/\d[-/.:：]$/.test(before) || /(?:订单号|交易号|手机号|电话|编号)\s*$/.test(before)) continue;
+      const unit = /块|元|圆|毛|角/.test(match[0]);
+      const chinese = !/\d/.test(match[1]);
+      if (chinese && !unit && !/(?:花了?|花费|付了?|支出|消费|到账|收入|收到|买书|奶茶|咖啡|午饭|晚饭|早餐|地铁|打车|工资)\s*$/.test(before) && after.trim()) continue;
+      if (chinese && /^\s*(?:共|起|样|下|些|点)/.test(after)) continue;
+      let boundary = end;
+      const qualifier = after.match(/^\s*(?:多(?:块|元)?|左右|上下)/);
+      if (qualifier) boundary += qualifier[0].length;
+      ends.push(boundary);
+      pattern.lastIndex = boundary;
+    }
+    if (ends.length < 2) { parts.push(clause.trim()); continue; }
+    let cursor = 0;
+    for (const end of ends) {
+      const piece = clause.slice(cursor, end).trim().replace(/^(?:另外|并且|还|再|又|和|跟|及)+/, '');
+      if (piece) parts.push(piece);
+      cursor = end;
+    }
+    const tail = clause.slice(cursor).trim();
+    if (tail) {
+      if (matchCat(tail, 'out') || INC.test(tail) || EXP.test(tail)) parts.push(tail);
+      else if (parts.length) parts[parts.length - 1] += tail;
+    }
+  }
+  return parts;
+}
+
 function parseEntry(text) {
-  const segs = text.split(/[,，、;；。\n]+|然后|还有|以及/).map(s => s.trim()).filter(Boolean);
+  const segs = splitSpokenBills(text);
   const ds = []; let prev = null, transfer = false;
   for (const s of segs) {
+    if (ds.length && /^(?:一共|总共|合计|总计|共计)/.test(s)) continue;
     const d = parseSeg(s);
     if (!d) continue;
     if (d.transfer) { transfer = true; continue; }
@@ -407,20 +450,6 @@ function parseEntry(text) {
   };
   const wk = d => '周' + '日一二三四五六'[new Date(d + 'T00:00:00').getDay()];
 
-  function load() {
-    try {
-      const r = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (r && Array.isArray(r.bills)) {
-        S.bills = r.bills; S.catsOut = r.catsOut || S.catsOut;
-        S.prefs = Object.assign(S.prefs, r.prefs || {}); S.voiceOK = !!r.voiceOK;
-        return true;
-      }
-    } catch (e) { /* storage unavailable */ }
-    return false;
-  }
-  function persist() {
-    try { localStorage.setItem(KEY, JSON.stringify({ bills: S.bills, catsOut: S.catsOut, prefs: S.prefs, voiceOK: S.voiceOK })); } catch (e) { /* ignore */ }
-  }
   function seed() {
     const now = new Date();
     S.bills = SEED.map(([a, dir, amount, cat, note], i) => ({
@@ -441,7 +470,7 @@ function parseEntry(text) {
     const todo = b.cat === '待分类';
     return `<div class="card ${gone ? 'gone' : ''}">
       <div class="c-top"><span class="c-cat ${todo ? 'todo' : ''}">${esc(b.cat)}</span><span class="c-amt ${b.dir}">${sgn(b)}${money(b.amount)}</span></div>
-      <div class="c-meta">${dl(b.date)} · ${esc(b.note || '无备注')} · 支付方式：${esc(b.pay || '未填写')}${b.src === 'voice' ? ' · 语音' : ''}</div>
+      <div class="c-meta">${dl(b.date)} · ${esc(b.note || '无备注')} · 支付方式：${esc(b.pay || '未填写')}${b.src === 'voice' ? ' · 语音' : b.src === 'image' ? ' · 图片' : ''}</div>
       <div class="c-act">${gone ? '<span>已撤销</span>' : `<button data-act="edit" data-bid="${b.id}">修改</button><button data-act="undo" data-bid="${b.id}">撤销</button>`}</div>
     </div>`;
   }
@@ -506,7 +535,10 @@ function parseEntry(text) {
       addMsg({ role: 'bot', kind: 'fail', drafts, src }); return false;
     }
     const items = drafts.map(d => ({ id: uid(), dir: d.dir, amount: d.amount, cat: d.cat, date: d.date, note: d.note, pay: d.pay || null, createdAt: Date.now(), src }));
-    S.bills.push(...items); persist(); lastBatch = items.map(i => i.id);
+    const previous = [...S.bills];
+    S.bills.push(...items);
+    if (!persist()) { S.bills = previous; return false; }
+    lastBatch = items.map(i => i.id);
     addMsg({ role: 'bot', kind: 'bills', items: items.map(i => ({ ...i })) });
     renderAll(); return true;
   }
@@ -730,9 +762,9 @@ function parseEntry(text) {
         <div class="prow"><div>重复记录提醒<small>短时间内出现相同金额和相似内容时，先让你核对</small></div>${sw('p-dup', S.prefs.dup)}</div>
         <div class="prow"><div>模拟保存失败（演示用）<small>开启后记账会失败，可在聊天里点“重试保存”</small></div>${sw('p-fail', S.prefs.fail)}</div></div>
       <div class="sec"><h3>隐私设置</h3>
-        <p>语音只用于识别你说的账目，原始录音在识别后不保留。识别出的文字会交给智能理解服务整理成账单，只使用你自己记录的账单做统计和查询。</p>
+        <p>图片在本设备识别，不上传，也不保存原图。首次需联网下载识别组件与中文模型。语音由浏览器的识别服务处理，可能通过网络传输；识别文字由本地规则整理为账单。</p>
         <div class="prow"><div>语音功能<small>${S.voiceOK ? '已开启' : '未开启，首次使用时会询问'}</small></div>${S.voiceOK ? '<button class="btn" data-act="revoke">关闭语音</button>' : ''}</div></div>
-      <div class="sec"><h3>数据管理</h3><p>当前共有 ${S.bills.length} 笔账单，数据只保存在这个浏览器里。</p>
+      <div class="sec"><h3>数据管理</h3><p>当前共有 ${S.bills.length} 笔账单，更新同一网址的网页不会主动清空账单。数据保存在此浏览器中；清理浏览器、换设备或更换域名后需用备份恢复。</p><div class="prow"><button class="btn primary" data-act="backup-export">导出备份</button><button class="btn" data-act="backup-import">导入备份</button></div>
         <div class="prow"><button class="btn" data-act="reseed">恢复示例数据</button>
         <button class="btn danger ${meAskClear ? 'ask' : ''}" data-act="clear">${meAskClear ? `确认清空 ${S.bills.length} 笔？` : '清空全部账单'}</button></div></div>`;
   }
@@ -760,7 +792,7 @@ function parseEntry(text) {
     sheetCtx = { id, dir: b.dir, askDel: false };
     drawSheet({ amount: b.amount, cat: b.cat, date: b.date, note: b.note || '', pay: b.pay || '' });
   }
-  function closeSheet() { $('#sheetWrap').hidden = true; $('#sheetWrap').innerHTML = ''; sheetCtx = null; }
+  function closeSheet() { cancelOcr(); restoreDraft = null; $('#sheetWrap').hidden = true; $('#sheetWrap').innerHTML = ''; sheetCtx = null; }
 
   /* ---------- tabs & voice ---------- */
   const ICON = {
@@ -1007,8 +1039,274 @@ function parseEntry(text) {
     persist();
   });
 
+  // Local OCR and portable backups. The existing KEY remains stable across app updates.
+  let storageBlocked = false;
+  let recoveryNotice = '';
+  function validDate(value) {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+      !isNaN(Date.parse(value + 'T12:00:00')) && ymd(new Date(value + 'T12:00:00')) === value;
+  }
+  function validateData(data) {
+    if (!data || !Array.isArray(data.bills) || data.bills.length > 100000) throw Error('备份格式无效');
+    if (data.schemaVersion != null && (!Number.isInteger(data.schemaVersion) || data.schemaVersion > 1)) throw Error('此备份来自更新版本，请先更新网页');
+    const seen = new Set();
+    const bills = data.bills.map(b => {
+      if (!b || typeof b.id !== 'string' || !b.id || seen.has(b.id) ||
+          !['out','in'].includes(b.dir) || typeof b.amount !== 'number' ||
+          !Number.isFinite(b.amount) || b.amount <= 0 || !validDate(b.date) ||
+          typeof b.cat !== 'string' || !b.cat || typeof b.note !== 'string') throw Error('账单数据不完整或重复');
+      seen.add(b.id);
+      return { id:b.id, dir:b.dir, amount:round2(b.amount), cat:b.cat, date:b.date,
+        note:b.note, pay:typeof b.pay === 'string' ? b.pay : null,
+        createdAt:Number.isFinite(b.createdAt) ? b.createdAt : Date.now(),
+        src:['text','voice','image'].includes(b.src) ? b.src : 'text' };
+    });
+    const categories = Array.isArray(data.catsOut) ? data.catsOut.filter(c => typeof c === 'string' && c.length && c.length <= 40) : [...S.catsOut];
+    bills.filter(b=>b.dir==='out' && b.cat!=='待分类').forEach(b=> { if (!categories.includes(b.cat)) categories.push(b.cat); });
+    return { bills, catsOut:[...new Set(categories)],
+      prefs:{ dup: data.prefs?.dup !== false, fail: data.prefs?.fail === true },
+      voiceOK:data.voiceOK === true };
+  }
+  function snapshot() {
+    return { app:'suikouji', schemaVersion:1, exportedAt:new Date().toISOString(),
+      bills:S.bills, catsOut:S.catsOut, prefs:S.prefs, voiceOK:S.voiceOK };
+  }
+  function load() {
+    let found = false;
+    try {
+      for (const key of [KEY, KEY + ':backup']) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        found = true;
+        try {
+          const data = validateData(JSON.parse(raw));
+          Object.assign(S, data);
+          if (key !== KEY) recoveryNotice = '主数据无法读取，已读取上次本地备份。请先导出备份；原始数据尚未覆盖。';
+          return true;
+        } catch (_) {}
+      }
+    } catch (_) { found = true; }
+    if (found) {
+      storageBlocked = true;
+      recoveryNotice = '账单存储无法读取。为保护旧数据，已暂停写入。请先导出原始数据并检查浏览器存储权限，或导入有效备份恢复。';
+      return true; // Never seed or overwrite a malformed existing database.
+    }
+    return false;
+  }
+  function persist() {
+    if (storageBlocked) { toast('旧数据读取异常，已暂停保存，请先备份并恢复'); return false; }
+    try {
+      const next = JSON.stringify(snapshot());
+      validateData(JSON.parse(next));
+      const previous = localStorage.getItem(KEY);
+      if (previous) {
+        try { validateData(JSON.parse(previous)); localStorage.setItem(KEY + ':backup', previous); }
+        catch (e) { if (e.name === 'QuotaExceededError') throw e; }
+      }
+      localStorage.setItem(KEY, next);
+      return true;
+    } catch (_) { toast('未能保存到浏览器，请立即导出备份并检查存储空间'); return false; }
+  }
+  function downloadJson(data, name) {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)], {type:'application/json'}));
+    const a = document.createElement('a'); a.href=url; a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 30000);
+  }
+  function exportBackup() {
+    if (storageBlocked || recoveryNotice) {
+      const raw = { app:'suikouji-recovery', current:localStorage.getItem(KEY), backup:localStorage.getItem(KEY+':backup') };
+      downloadJson(raw,'随口记-原始数据-'+ymd(new Date())+'.json');
+      if (storageBlocked) return;
+    }
+    downloadJson(snapshot(),'随口记-账单备份-'+ymd(new Date())+'.json');
+    toast('备份已生成，请保存在安全位置');
+  }
+  let restoreDraft = null;
+  function previewRestore(data) {
+    restoreDraft = validateData(data);
+    $('#sheetWrap').innerHTML = '<div class="sheet" role="dialog" aria-label="导入账单备份"><h3>导入备份</h3><p>备份含 '+restoreDraft.bills.length+' 笔账单。导入会合并到现有账单，相同编号且内容一致的记录会跳过，不会清空原有账单。</p><p>请只导入你自己导出的备份。</p><div class="btns"><button class="btn" data-act="sclose">取消</button><button class="btn primary" data-act="restore-save">确认合并</button></div></div>';
+    $('#sheetWrap').hidden = false;
+  }
+  function mergeRestore() {
+    if (!restoreDraft) return;
+    const before = { bills:S.bills, catsOut:S.catsOut }, oldBlocked=storageBlocked;
+    const merged=[...S.bills], map=new Map(merged.map(b=>[b.id,b]));
+    for (const bill of restoreDraft.bills) {
+      const existing=map.get(bill.id);
+      if (existing && ['dir','amount','cat','date','note','pay'].every(k=>existing[k]===bill[k])) continue;
+      const b={...bill,id:existing?uid():bill.id};
+      merged.push(b); map.set(b.id,b);
+    }
+    S.bills=merged; S.catsOut=[...new Set([...S.catsOut,...restoreDraft.catsOut])];
+    storageBlocked=false;
+    if (!persist()) { Object.assign(S,before); storageBlocked=oldBlocked; return; }
+    recoveryNotice=''; restoreDraft=null; closeSheet(); renderAll(); toast('已合并，原有账单保留');
+  }
+
+  let ocrJob=null, ocrSerial=0, ocrImageUrl=null, ocrDraft=null, ocrScript=null;
+  function cancelOcr() {
+    const job=ocrJob; ocrJob=null; ocrSerial++;
+    if (job) { clearTimeout(job.timer); if (job.worker) job.worker.terminate().catch(()=>{}); }
+    if (ocrImageUrl) { URL.revokeObjectURL(ocrImageUrl); ocrImageUrl=null; }
+    ocrDraft=null;
+  }
+  function loadOcrLibrary() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (ocrScript) return ocrScript;
+    ocrScript = new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
+      script.referrerPolicy='no-referrer';
+      const timer=setTimeout(()=>{script.remove();ocrScript=null;reject(Error('识别组件下载超时，请检查网络'));},30000);
+      script.onload=()=>{clearTimeout(timer);resolve(window.Tesseract);};
+      script.onerror=()=>{clearTimeout(timer);script.remove();ocrScript=null;reject(Error('识别组件下载失败，请检查网络后重试'));};
+      document.head.appendChild(script);
+    });
+    return ocrScript;
+  }
+  function parseReceipt(raw) {
+    const text=raw.normalize('NFKC').replace(/([\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])/g,'$1').replace(/[,，](?=\d{3}(?:\D|$))/g,'');
+    const lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean);
+    const amounts=[];
+    lines.forEach((line,i)=>{
+      const compact=line.replace(/\s/g,'');
+      if (/订单号|交易号|商户号|流水号|余额|找零|优惠|折扣|实收现金/.test(compact) && !/实付|实付款|应付/.test(compact)) return;
+      const values=[...compact.matchAll(/(?:[¥￥]|人民币)?(-?\d{1,8}(?:\.\d{1,2})?)(?:元)?/g)];
+      let score=/实付|实付款|支付金额|付款金额|应付金额/.test(compact)?100:/合计|总计|总额|金额|收款金额/.test(compact)?80:/[¥￥]|元/.test(compact)?50:/^[+-]?\d+\.\d{2}$/.test(compact)?35:0;
+      if (score && !values.length) return;
+      if (score) values.forEach(m=>{
+        const amount=Math.abs(Number(m[1]));
+        if (amount>0 && amount<1e8 && !/^\d{4}[-/.年]/.test(compact)) amounts.push({amount,score});
+      });
+      if (/^(实付|实付款|支付金额|付款金额|合计|总计|收款金额)[:：]?$/.test(compact)) {
+        const next=(lines[i+1]||'').replace(/\s/g,'');
+        const match=next.match(/^[¥￥+-]?(\d{1,8}(?:\.\d{1,2})?)元?$/);
+        if (match) amounts.push({amount:Number(match[1]),score:95});
+      }
+    });
+    amounts.sort((a,b)=>b.score-a.score);
+    const unique=[...new Set(amounts.map(a=>a.amount))];
+    const best=amounts[0], tied=best && amounts.some(a=>a.score===best.score && a.amount!==best.amount);
+    const dm=text.match(/(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})/);
+    const date=dm?dm[1]+'-'+pad(dm[2])+'-'+pad(dm[3]):'';
+    const dir=/收款到账|收款成功|收入|收钱到账/.test(text)?'in':'out';
+    const note=lines.find(l=>! /^(微信支付|支付宝|交易成功|支付成功|付款成功|收款成功|电子小票|购物小票)$/.test(l) &&
+      !/[¥￥]|\d{3,}|订单号|交易号/.test(l)) || '';
+    return { amount:best&&!tied?best.amount:'', date:validDate(date)?date:'', dir,
+      cat:matchCat(text,dir)||'待分类', note:note.slice(0,100),
+      pay:/微信/.test(text)?'微信':/支付宝/.test(text)?'支付宝':'', candidates:unique.slice(0,12), raw };
+  }
+  function drawOcrDraft(d) {
+    ocrDraft=d;
+    const wrap=$('#sheetWrap');
+    wrap.innerHTML='<div class="sheet" role="dialog" aria-label="确认图片账单"><h3>确认图片账单</h3>'+
+      (ocrImageUrl?'<img src="'+ocrImageUrl+'" alt="选中的账单图片" style="max-height:180px;object-fit:contain">':'')+
+      '<p>每张图片整理一笔账单；小票按总额记账。金额、日期和收支方向可能识别错误，请核对后保存。</p>'+
+      '<label>收支<select id="ocr-dir"><option value="out">支出</option><option value="in">收入</option></select></label>'+
+      '<label>金额（元）<input id="ocr-amount" type="number" min="0.01" step="0.01" inputmode="decimal" value="'+esc(d.amount)+'"></label>'+
+      (d.candidates.length?'<p>识别到的金额：'+d.candidates.map(m=>'<button class="pill" data-act="ocr-amount" data-amount="'+m+'">'+money(m)+'</button>').join('')+'</p>':'')+
+      '<label>发生日期<input id="ocr-date" type="date" value="'+esc(d.date)+'"></label>'+
+      '<label>分类<select id="ocr-cat"></select></label>'+
+      '<label>备注<input id="ocr-note" maxlength="200" value="'+esc(d.note)+'"></label>'+
+      '<label>支付方式<select id="ocr-pay"><option value="">未填写</option>'+PAYS.map(p=>'<option>'+p+'</option>').join('')+'</select></label>'+
+      '<details><summary>查看或修正识别文字</summary><textarea id="ocr-raw" aria-label="识别文字" style="width:100%;height:140px">'+esc(d.raw)+'</textarea><button class="btn" data-act="ocr-reparse">重新整理字段</button></details>'+
+      '<div class="btns"><button class="btn" data-act="sclose">取消</button><button class="btn primary" data-act="ocr-save">确认保存</button></div></div>';
+    $('#ocr-dir').value=d.dir; updateOcrCategories(d.cat); $('#ocr-pay').value=d.pay;
+    $('#ocr-dir').onchange=()=>updateOcrCategories('待分类');
+    wrap.hidden=false;
+  }
+  function updateOcrCategories(selected) {
+    $('#ocr-cat').innerHTML=catsFor($('#ocr-dir').value).map(c=>'<option>'+esc(c)+'</option>').join('');
+    $('#ocr-cat').value=catsFor($('#ocr-dir').value).includes(selected)?selected:'待分类';
+  }
+  async function recognizeImage(file) {
+    closeSheet(); cancelSpeech();
+    if (!file || !/^image\//.test(file.type)) { toast('请选择图片文件'); return; }
+    if (file.size>20*1024*1024) { toast('图片太大，请选择小于20MB的图片'); return; }
+    const job={id:++ocrSerial,worker:null,timer:null}; ocrJob=job;
+    const alive=()=>ocrJob===job;
+    ocrImageUrl=URL.createObjectURL(file);
+    $('#sheetWrap').innerHTML='<div class="sheet" role="dialog" aria-label="本地识别图片"><h3>本地识别账单</h3><p>图片仅在设备上处理，不上传。首次使用需联网下载识别组件和中文模型，手机上可能需要较长时间。</p><p id="ocr-status" role="status" aria-live="polite">正在加载识别组件…</p><button class="btn" data-act="sclose">取消</button></div>';
+    $('#sheetWrap').hidden=false;
+    job.timer=setTimeout(()=>{
+      if (!alive()) return;
+      cancelOcr();
+      const status=$('#ocr-status'); if(status) status.textContent='识别超时，请换用更清晰或裁剪后的图片重试。';
+    },180000);
+    try {
+      const lib=await loadOcrLibrary(); if(!alive()) return;
+      const worker=await lib.createWorker(['chi_sim','eng'],1,{
+        workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js',
+        corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@6.0.0',
+        logger:m=>{if(alive() && $('#ocr-status')) $('#ocr-status').textContent=m.status==='recognizing text'?'正在识别 '+Math.round(m.progress*100)+'%':'正在准备中文识别模型…';}
+      });
+      if(!alive()) { await worker.terminate(); return; } job.worker=worker;
+      // Decode locally and limit the canvas size for mobile memory usage.
+      const image=new Image(); image.src=ocrImageUrl; await image.decode();
+      if(!alive()) return;
+      const scale=Math.min(1,2400/Math.max(image.naturalWidth,image.naturalHeight));
+      const canvas=document.createElement('canvas'); canvas.width=Math.max(1,Math.round(image.naturalWidth*scale)); canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+      const context=canvas.getContext('2d'); context.fillStyle='#fff'; context.fillRect(0,0,canvas.width,canvas.height); context.drawImage(image,0,0,canvas.width,canvas.height);
+      const result=await worker.recognize(canvas); if(!alive()) return;
+      clearTimeout(job.timer); ocrJob=null; await worker.terminate();
+      drawOcrDraft(parseReceipt(result.data.text||''));
+    } catch(error) {
+      if(!alive()) return;
+      cancelOcr();
+      const status=$('#ocr-status');
+      if(status) status.textContent='识别未完成。请检查网络、图片格式或换张清晰的截图重试。';
+    }
+  }
+  function saveOcrDraft() {
+    if (!ocrDraft) return;
+    const amount=Number($('#ocr-amount').value), date=$('#ocr-date').value;
+    if(!Number.isFinite(amount)||amount<=0||amount>=1e8) { toast('请填写有效金额'); return; }
+    if(!validDate(date)) { toast('请填写正确的发生日期'); return; }
+    const draft={amount:round2(amount),date,dir:$('#ocr-dir').value,cat:$('#ocr-cat').value,note:$('#ocr-note').value.trim(),pay:$('#ocr-pay').value};
+    if(S.bills.some(b=>b.date===date&&b.dir===draft.dir&&b.amount===draft.amount) && ocrDraft.duplicateConfirmed !== JSON.stringify(draft)) {
+      ocrDraft.duplicateConfirmed=JSON.stringify(draft);
+      const button=$('[data-act="ocr-save"]'); button.textContent='有同日同金额账单，确认仍保存'; toast('可能重复，请核对后再次确认'); return;
+    }
+    if(attemptSave([draft],'image')) { closeSheet(); toast('图片账单已保存'); }
+  }
+  document.addEventListener('click',e=>{
+    const action=e.target.closest('[data-act]')?.dataset.act;
+    if(action==='image-pick') { cancelSpeech(); $('#image-file').click(); }
+    if(action==='ocr-save') saveOcrDraft();
+    if(action==='ocr-amount') $('#ocr-amount').value=e.target.closest('[data-act]').dataset.amount;
+    if(action==='ocr-reparse') drawOcrDraft(parseReceipt($('#ocr-raw').value));
+    if(action==='backup-export') { try { exportBackup(); } catch(_) { toast('备份失败，请检查浏览器存储权限'); } }
+    if(action==='backup-import') $('#backup-file').click();
+    if(action==='restore-save') mergeRestore();
+  });
+  $('#image-file').addEventListener('change',e=>{const file=e.target.files[0];e.target.value='';if(file)recognizeImage(file);});
+  $('#backup-file').addEventListener('change',async e=>{
+    const file=e.target.files[0];e.target.value='';if(!file)return;
+    try {
+      if(file.size>20*1024*1024)throw Error('备份文件过大');
+      let data=JSON.parse(await file.text());
+      if(data.app==='suikouji-recovery') {
+        let recovered=null;
+        for(const raw of [data.current,data.backup]) { try { recovered=validateData(JSON.parse(raw));break; } catch(_){} }
+        if(!recovered)throw Error('原始数据无法自动恢复，请保留文件以便修复');
+        data=recovered;
+      }
+      closeSheet(); previewRestore(data);
+    } catch(error) { toast(error.message||'备份无法读取'); }
+  });
+  window.addEventListener('storage',e=>{
+    if(e.key!==KEY)return;
+    recoveryNotice='其他标签页更新了账单，请刷新本页后继续记账，以免覆盖。';
+    storageBlocked=true;
+    const banner=$('#storage-status'); if(banner) {banner.textContent=recoveryNotice;banner.hidden=false;}
+  });
+
   /* ---------- init ---------- */
   if (!load()) { seed(); persist(); }
+  if (recoveryNotice) {
+    $('#storage-status').textContent = recoveryNotice;
+    $('#storage-status').hidden = false;
+  }
   $('#chips').innerHTML = TRY.slice(0, 9).map(t => `<button data-act="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('');
   $('#tryList').innerHTML = TRY.map(t => `<button data-act="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('');
   botSay('你好，我是随口记。直接打字，或点左下角的话筒，按住说话、松开发送，像发消息一样告诉我收支就行。');
