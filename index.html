@@ -86,6 +86,13 @@ button{cursor:pointer}
 .chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:12.5px;color:var(--ink2)}
 .composer{flex:none;display:flex;gap:8px;align-items:center;padding:8px 12px 10px;background:var(--surface);border-top:1px solid var(--line)}
 .composer input[type=text]{flex:1;min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px}
+.booking-date{flex:none;padding:8px 12px;background:var(--surface);border-top:1px solid var(--line)}
+.booking-date p{margin:0 0 6px;font-size:12px;color:var(--ink2)}
+.booking-date .date-options{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.booking-date button,.booking-date input{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 8px;font-size:12px;min-width:0}
+.booking-date button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.booking-date.backfill{background:var(--warn-soft)}
+.booking-date.backfill p{color:var(--warn)}
 .ibtn{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;padding:0}
 .ibtn svg{width:20px;height:20px;stroke:var(--ink2);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .send{flex:none;border:0;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:8px 16px;font-weight:700}
@@ -201,6 +208,17 @@ button{cursor:pointer}
         <div id="storage-status" role="status" hidden style="padding:10px;background:var(--warn-soft);color:var(--warn)"></div><div id="msgs"></div>
         <div class="chips" id="chips"></div>
         <div id="voicePanel" hidden></div>
+        <div class="booking-date" id="booking-date">
+          <p id="booking-date-label" role="status" aria-live="polite"></p>
+          <div class="date-options">
+            <button type="button" data-act="booking-date" data-day="0">今天</button>
+            <button type="button" data-act="booking-date" data-day="-1">昨天</button>
+            <button type="button" data-act="booking-date" data-day="-2">前天</button>
+            <label for="booking-custom" style="font-size:12px">其他日期</label>
+            <input id="booking-custom" type="date" aria-label="选择补记日期">
+            <button type="button" id="booking-reset" data-act="booking-date" data-day="0" hidden>回到今天</button>
+          </div>
+        </div>
         <input id="image-file" type="file" accept="image/*" hidden><input id="backup-file" type="file" accept=".json,application/json" hidden>
         <form class="composer" id="composer" autocomplete="off">
           <button type="button" class="ibtn" id="modeBtn" aria-label="切换文字和语音输入"></button>
@@ -392,7 +410,7 @@ function splitSpokenBills(text) {
   return parts;
 }
 
-function parseEntry(text) {
+function parseEntry(text, defaultDate = ymd(new Date())) {
   const segs = splitSpokenBills(text);
   const ds = []; let prev = null, transfer = false;
   for (const s of segs) {
@@ -400,12 +418,11 @@ function parseEntry(text) {
     const d = parseSeg(s);
     if (!d) continue;
     if (d.transfer) { transfer = true; continue; }
-    if (d.off == null) d.off = prev ?? 0; else prev = d.off;
+    if (d.off == null) d.date = prev ?? defaultDate;
+    else { d.date = ymd(addD(new Date(), d.off)); prev = d.date; }
     ds.push(d);
   }
   if (!ds.some(d => d.amount != null || d.amb)) return { drafts: [], transfer };
-  const now = new Date();
-  ds.forEach(d => { d.date = ymd(addD(now, d.off)); });
   return { drafts: ds, transfer };
 }
 //#PARSER-END
@@ -436,6 +453,44 @@ function parseEntry(text) {
   let bf = { ym: ym0(), dir: 'all', cat: 'all', q: '', range: null };
   let stYm = ym0(), meAskCat = null, meAskClear = false, sheetCtx = null, tt = null;
   let voiceMode = false, recording = false, recStart = 0, si = 0;
+  // This selection belongs to the current page session, never to the saved ledger.
+  let selectedBookingDate = null;
+  const bookingDate = () => selectedBookingDate || ymd(new Date());
+  function renderBookingDate() {
+    const today = ymd(new Date()), chosen = bookingDate();
+    const backfill = chosen !== today;
+    $('#booking-date').classList.toggle('backfill', backfill);
+    $('#booking-date-label').textContent = backfill
+      ? '正在补记：' + chosen + ' · 连续记账沿用此日期'
+      : '记账日期：今天 · 说出的日期优先';
+    $('#booking-custom').max = today;
+    $('#booking-custom').value = chosen;
+    $('#booking-reset').hidden = !backfill;
+    document.querySelectorAll('[data-act="booking-date"]').forEach(button => {
+      const on = chosen === ymd(addD(new Date(), Number(button.dataset.day)));
+      button.classList.toggle('on', on);
+      button.setAttribute('aria-pressed', String(on));
+    });
+  }
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-act="booking-date"]');
+    if (!button) return;
+    selectedBookingDate = Number(button.dataset.day) === 0 ? null : ymd(addD(new Date(), Number(button.dataset.day)));
+    renderBookingDate();
+  });
+  $('#booking-custom').addEventListener('change', event => {
+    const value = event.target.value;
+    if (!validDate(value) || value > ymd(new Date())) {
+      toast('请选择今天或更早的有效日期'); renderBookingDate(); return;
+    }
+    selectedBookingDate = value === ymd(new Date()) ? null : value;
+    renderBookingDate();
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) renderBookingDate(); });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) selectedBookingDate = null;
+    renderBookingDate();
+  });
 
   const uid = () => 'b' + Date.now().toString(36) + (++uidn);
   const sgn = b => (b.dir === 'in' ? '+' : '−');
@@ -677,7 +732,8 @@ function parseEntry(text) {
     if (/(刚才|上一笔|上笔|那笔)/.test(t) && /不是|改成|改为|应该是|应为|其实是/.test(t)) return doFixAmount(t);
     if (/^把.+(改到|改成|改为|归到|归为).+/.test(t)) return doFixCat(t);
     if (/多少|买了什么|相比|结余/.test(t)) return doQuery(t);
-    const r = parseEntry(t);
+    renderBookingDate();
+    const r = parseEntry(t, bookingDate());
     if (r.drafts.length) {
       pending = { drafts: r.drafts, src }; askNext();
       if (r.transfer) botSay('另外，账户间转账不计入收支统计，那一条没有记账。');
@@ -1164,7 +1220,7 @@ function parseEntry(text) {
     });
     return ocrScript;
   }
-  function parseReceipt(raw) {
+  function parseReceipt(raw, defaultDate = bookingDate()) {
     const text=raw.normalize('NFKC').replace(/([\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])/g,'$1').replace(/[,，](?=\d{3}(?:\D|$))/g,'');
     const lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean);
     const amounts=[];
@@ -1192,7 +1248,8 @@ function parseEntry(text) {
     const dir=/收款到账|收款成功|收入|收钱到账/.test(text)?'in':'out';
     const note=lines.find(l=>! /^(微信支付|支付宝|交易成功|支付成功|付款成功|收款成功|电子小票|购物小票)$/.test(l) &&
       !/[¥￥]|\d{3,}|订单号|交易号/.test(l)) || '';
-    return { amount:best&&!tied?best.amount:'', date:validDate(date)?date:'', dir,
+    return { amount:best&&!tied?best.amount:'', date:validDate(date)?date:defaultDate,
+      dateSource:validDate(date)?'image':'selected', defaultDate, dir,
       cat:matchCat(text,dir)||'待分类', note:note.slice(0,100),
       pay:/微信/.test(text)?'微信':/支付宝/.test(text)?'支付宝':'', candidates:unique.slice(0,12), raw };
   }
@@ -1206,6 +1263,7 @@ function parseEntry(text) {
       '<label>金额（元）<input id="ocr-amount" type="number" min="0.01" step="0.01" inputmode="decimal" value="'+esc(d.amount)+'"></label>'+
       (d.candidates.length?'<p>识别到的金额：'+d.candidates.map(m=>'<button class="pill" data-act="ocr-amount" data-amount="'+m+'">'+money(m)+'</button>').join('')+'</p>':'')+
       '<label>发生日期<input id="ocr-date" type="date" value="'+esc(d.date)+'"></label>'+
+      '<p>'+(d.dateSource==='image'?'日期来自图片，请核对。':'图片未识别出有效日期，已使用本次记账日期，请核对。')+'</p>'+
       '<label>分类<select id="ocr-cat"></select></label>'+
       '<label>备注<input id="ocr-note" maxlength="200" value="'+esc(d.note)+'"></label>'+
       '<label>支付方式<select id="ocr-pay"><option value="">未填写</option>'+PAYS.map(p=>'<option>'+p+'</option>').join('')+'</select></label>'+
@@ -1223,7 +1281,7 @@ function parseEntry(text) {
     closeSheet(); cancelSpeech();
     if (!file || !/^image\//.test(file.type)) { toast('请选择图片文件'); return; }
     if (file.size>20*1024*1024) { toast('图片太大，请选择小于20MB的图片'); return; }
-    const job={id:++ocrSerial,worker:null,timer:null}; ocrJob=job;
+    const job={id:++ocrSerial,worker:null,timer:null,defaultDate:bookingDate()}; ocrJob=job;
     const alive=()=>ocrJob===job;
     ocrImageUrl=URL.createObjectURL(file);
     $('#sheetWrap').innerHTML='<div class="sheet" role="dialog" aria-label="本地识别图片"><h3>本地识别账单</h3><p>图片仅在设备上处理，不上传。首次使用需联网下载识别组件和中文模型，手机上可能需要较长时间。</p><p id="ocr-status" role="status" aria-live="polite">正在加载识别组件…</p><button class="btn" data-act="sclose">取消</button></div>';
@@ -1249,7 +1307,7 @@ function parseEntry(text) {
       const context=canvas.getContext('2d'); context.fillStyle='#fff'; context.fillRect(0,0,canvas.width,canvas.height); context.drawImage(image,0,0,canvas.width,canvas.height);
       const result=await worker.recognize(canvas); if(!alive()) return;
       clearTimeout(job.timer); ocrJob=null; await worker.terminate();
-      drawOcrDraft(parseReceipt(result.data.text||''));
+      drawOcrDraft(parseReceipt(result.data.text||'',job.defaultDate));
     } catch(error) {
       if(!alive()) return;
       cancelOcr();
@@ -1274,7 +1332,7 @@ function parseEntry(text) {
     if(action==='image-pick') { cancelSpeech(); $('#image-file').click(); }
     if(action==='ocr-save') saveOcrDraft();
     if(action==='ocr-amount') $('#ocr-amount').value=e.target.closest('[data-act]').dataset.amount;
-    if(action==='ocr-reparse') drawOcrDraft(parseReceipt($('#ocr-raw').value));
+    if(action==='ocr-reparse') drawOcrDraft(parseReceipt($('#ocr-raw').value,ocrDraft.defaultDate));
     if(action==='backup-export') { try { exportBackup(); } catch(_) { toast('备份失败，请检查浏览器存储权限'); } }
     if(action==='backup-import') $('#backup-file').click();
     if(action==='restore-save') mergeRestore();
@@ -1302,6 +1360,7 @@ function parseEntry(text) {
   });
 
   /* ---------- init ---------- */
+  renderBookingDate();
   if (!load()) { seed(); persist(); }
   if (recoveryNotice) {
     $('#storage-status').textContent = recoveryNotice;
